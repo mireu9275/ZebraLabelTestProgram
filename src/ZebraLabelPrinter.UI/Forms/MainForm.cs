@@ -19,12 +19,15 @@ namespace ZebraLabelPrinter.UI.Forms
         private readonly LabelPreviewService _previewService = new LabelPreviewService();
         // 미리보기/프린터 둘 다 같은 ZPL 사용 (^CI28 + ^A1 + KFONT3, raw UTF-8 한글)
         private readonly KoreanFontProfile _profile = KoreanFontProfile.Kfont3();
+        private bool _suppressDataBindingHandler;
 
         public MainForm()
         {
             InitializeComponent();
             _template = SampleTemplates.PartLabel100x50();
             LoadDefaults();
+            WireDataBindingEvents();
+            RegenerateZplFromTemplate();
         }
 
         private void LoadDefaults()
@@ -32,10 +35,45 @@ namespace ZebraLabelPrinter.UI.Forms
             LoadInstalledPrinters();
             EnsureKoreanFont();
 
-            txtPartNo.Text = "PART-12345";
-            txtLotNo.Text = "2605150099";
-            txtQr.Text = "PART-12345|2605150099";
-            numCopies.Value = 1;
+            _suppressDataBindingHandler = true;
+            try
+            {
+                txtPartNo.Text = "PART-12345";
+                txtLotNo.Text = "2605150099";
+                txtQr.Text = "PART-12345|2605150099";
+                numCopies.Value = 1;
+            }
+            finally
+            {
+                _suppressDataBindingHandler = false;
+            }
+        }
+
+        private void WireDataBindingEvents()
+        {
+            txtPartNo.TextChanged += OnDataBindingChanged;
+            txtLotNo.TextChanged += OnDataBindingChanged;
+            txtQr.TextChanged += OnDataBindingChanged;
+            numCopies.ValueChanged += OnDataBindingChanged;
+        }
+
+        private void OnDataBindingChanged(object sender, EventArgs e)
+        {
+            if (_suppressDataBindingHandler) return;
+            RegenerateZplFromTemplate();
+        }
+
+        private void RegenerateZplFromTemplate()
+        {
+            try
+            {
+                var zpl = BuildZpl(_profile);
+                txtZpl.Text = ZplLabelBuilder.Format(zpl);
+            }
+            catch (Exception ex)
+            {
+                SetStatus("ZPL 자동 갱신 실패: " + ex.Message);
+            }
         }
 
         private void EnsureKoreanFont()
@@ -113,10 +151,9 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             try
             {
-                var zpl = BuildZpl(_profile);
-                txtZpl.Text = ZplLabelBuilder.Format(zpl);
+                RegenerateZplFromTemplate();
                 tabRight.SelectedTab = tabZpl;
-                SetStatus("ZPL 생성 완료 — " + _profile.DisplayName + " (" + zpl.Length + " bytes). 텍스트박스를 직접 편집해도 미리보기/출력에 반영됨");
+                SetStatus("ZPL 생성 완료 — " + _profile.DisplayName + " (" + txtZpl.Text.Length + " bytes). 데이터 필드 변경 시 자동 재생성됨");
             }
             catch (Exception ex)
             {
