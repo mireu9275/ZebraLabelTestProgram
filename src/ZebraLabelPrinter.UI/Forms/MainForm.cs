@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using ZebraLabelPrinter.Core.Builders;
 using ZebraLabelPrinter.Core.Models;
@@ -20,6 +21,7 @@ namespace ZebraLabelPrinter.UI.Forms
         // 미리보기/프린터 둘 다 같은 ZPL 사용 (^CI28 + ^A1 + KFONT3, raw UTF-8 한글)
         private readonly KoreanFontProfile _profile = KoreanFontProfile.Kfont3();
         private bool _suppressDataBindingHandler;
+        private readonly Dictionary<string, TextBox> _dataBindingControls = new Dictionary<string, TextBox>();
 
         // Designer state
         private LabelField _selectedField;
@@ -40,6 +42,7 @@ namespace ZebraLabelPrinter.UI.Forms
             LoadDefaults();
             WireDataBindingEvents();
             InitializeDesigner();
+            RebuildDataBindings();
             RegenerateZplFromTemplate();
         }
 
@@ -123,9 +126,6 @@ namespace ZebraLabelPrinter.UI.Forms
             _suppressDataBindingHandler = true;
             try
             {
-                txtPartNo.Text = "PART-12345";
-                txtLotNo.Text = "2605150099";
-                txtQr.Text = "PART-12345|2605150099";
                 numCopies.Value = 1;
             }
             finally
@@ -136,10 +136,83 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void WireDataBindingEvents()
         {
-            txtPartNo.TextChanged += OnDataBindingChanged;
-            txtLotNo.TextChanged += OnDataBindingChanged;
-            txtQr.TextChanged += OnDataBindingChanged;
+            // 동적 입력은 RebuildDataBindings에서 hook. numCopies만 정적이므로 여기서.
             numCopies.ValueChanged += OnDataBindingChanged;
+        }
+
+        private void RebuildDataBindings()
+        {
+            // DataBindingKey 있는 필드의 고유 키만 수집 (template 등장 순서 유지)
+            var keys = new List<string>();
+            var seen = new HashSet<string>();
+            foreach (var f in _template.Fields)
+            {
+                if (string.IsNullOrEmpty(f.DataBindingKey)) continue;
+                if (seen.Add(f.DataBindingKey)) keys.Add(f.DataBindingKey);
+            }
+
+            // 기존 입력값 보존 (재빌드 후에도 사용자가 입력한 값 유지)
+            var preserved = new Dictionary<string, string>();
+            foreach (var kv in _dataBindingControls) preserved[kv.Key] = kv.Value.Text;
+
+            _suppressDataBindingHandler = true;
+            try
+            {
+                grpData.Controls.Clear();
+                _dataBindingControls.Clear();
+
+                if (keys.Count == 0)
+                {
+                    var empty = new Label
+                    {
+                        Text = "디자이너에서 필드를 추가하고 DataBindingKey를 지정하면\n여기에 입력란이 생성됩니다.",
+                        Location = new Point(15, 30),
+                        AutoSize = true,
+                        ForeColor = Color.Gray
+                    };
+                    grpData.Controls.Add(empty);
+                    return;
+                }
+
+                int y = 25;
+                foreach (var key in keys)
+                {
+                    var lbl = new Label
+                    {
+                        Text = key + ":",
+                        Location = new Point(15, y + 4),
+                        AutoSize = true
+                    };
+
+                    var tb = new TextBox
+                    {
+                        Location = new Point(130, y),
+                        Size = new Size(190, 23),
+                        Tag = key
+                    };
+
+                    // 우선순위: 보존된 값 → 필드의 기본 Value
+                    if (preserved.TryGetValue(key, out var prev))
+                    {
+                        tb.Text = prev;
+                    }
+                    else
+                    {
+                        var seedField = _template.Fields.FirstOrDefault(f => f.DataBindingKey == key);
+                        tb.Text = seedField?.Value ?? string.Empty;
+                    }
+
+                    tb.TextChanged += OnDataBindingChanged;
+                    grpData.Controls.Add(lbl);
+                    grpData.Controls.Add(tb);
+                    _dataBindingControls[key] = tb;
+                    y += 32;
+                }
+            }
+            finally
+            {
+                _suppressDataBindingHandler = false;
+            }
         }
 
         private void OnDataBindingChanged(object sender, EventArgs e)
@@ -206,12 +279,12 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private IDictionary<string, string> CollectData()
         {
-            return new Dictionary<string, string>
+            var data = new Dictionary<string, string>();
+            foreach (var kv in _dataBindingControls)
             {
-                { "PART_NO", txtPartNo.Text ?? string.Empty },
-                { "LOT_NO", txtLotNo.Text ?? string.Empty },
-                { "QR", txtQr.Text ?? string.Empty }
-            };
+                data[kv.Key] = kv.Value.Text ?? string.Empty;
+            }
+            return data;
         }
 
         private int CurrentTargetDpi()
@@ -587,12 +660,15 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void AddField(LabelFieldType type)
         {
+            var name = type.ToString() + (_template.Fields.Count + 1);
             var f = new LabelField
             {
-                Name = type.ToString() + (_template.Fields.Count + 1),
+                Name = name,
                 FieldType = type,
                 X = 50,
-                Y = 50
+                Y = 50,
+                // 박스/라인 외에는 자동으로 데이터 바인딩 키 = Name → 좌측 입력란 자동 생성
+                DataBindingKey = (type == LabelFieldType.Box || type == LabelFieldType.Line) ? null : name
             };
             switch (type)
             {
@@ -608,6 +684,7 @@ namespace ZebraLabelPrinter.UI.Forms
             }
             _template.Fields.Add(f);
             SelectField(f);
+            RebuildDataBindings();
             RegenerateZplFromTemplate();
         }
 
@@ -616,12 +693,19 @@ namespace ZebraLabelPrinter.UI.Forms
             if (_selectedField == null) { SetStatus("삭제할 필드를 먼저 선택하세요"); return; }
             _template.Fields.Remove(_selectedField);
             SelectField(null);
+            RebuildDataBindings();
             RegenerateZplFromTemplate();
         }
 
         private void pgFieldProps_PropertyValueChanged(object s, System.Windows.Forms.PropertyValueChangedEventArgs e)
         {
             pnlCanvas.Invalidate();
+            // DataBindingKey/Name이 바뀐 경우만 입력란 재생성 (X/Y 등은 불필요)
+            var label = e.ChangedItem?.Label;
+            if (label == "DataBindingKey" || label == "Name")
+            {
+                RebuildDataBindings();
+            }
             RegenerateZplFromTemplate();
         }
     }

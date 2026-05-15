@@ -23,12 +23,6 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnPreview = new System.Windows.Forms.Button();
             this.btnGenerate = new System.Windows.Forms.Button();
             this.grpData = new System.Windows.Forms.GroupBox();
-            this.txtQr = new System.Windows.Forms.TextBox();
-            this.lblQr = new System.Windows.Forms.Label();
-            this.txtLotNo = new System.Windows.Forms.TextBox();
-            this.lblLotNo = new System.Windows.Forms.Label();
-            this.txtPartNo = new System.Windows.Forms.TextBox();
-            this.lblPartNo = new System.Windows.Forms.Label();
             this.grpLabelSize = new System.Windows.Forms.GroupBox();
             this.numLabelWidth = new System.Windows.Forms.NumericUpDown();
             this.lblLabelWidth = new System.Windows.Forms.Label();
@@ -141,68 +135,15 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnGenerate.UseVisualStyleBackColor = true;
             this.btnGenerate.Click += new System.EventHandler(this.btnGenerate_Click);
             //
-            // grpData
+            // grpData (동적 데이터 바인딩 입력 — MainForm.RebuildDataBindings에서 컨트롤 생성)
             //
-            this.grpData.Controls.Add(this.txtQr);
-            this.grpData.Controls.Add(this.lblQr);
-            this.grpData.Controls.Add(this.txtLotNo);
-            this.grpData.Controls.Add(this.lblLotNo);
-            this.grpData.Controls.Add(this.txtPartNo);
-            this.grpData.Controls.Add(this.lblPartNo);
+            this.grpData.AutoScroll = true;
             this.grpData.Location = new System.Drawing.Point(12, 305);
             this.grpData.Name = "grpData";
             this.grpData.Size = new System.Drawing.Size(330, 245);
             this.grpData.TabIndex = 1;
             this.grpData.TabStop = false;
             this.grpData.Text = "데이터 바인딩";
-            //
-            // txtQr
-            //
-            this.txtQr.Location = new System.Drawing.Point(110, 160);
-            this.txtQr.Name = "txtQr";
-            this.txtQr.Size = new System.Drawing.Size(210, 23);
-            this.txtQr.TabIndex = 5;
-            //
-            // lblQr
-            //
-            this.lblQr.AutoSize = true;
-            this.lblQr.Location = new System.Drawing.Point(15, 163);
-            this.lblQr.Name = "lblQr";
-            this.lblQr.Size = new System.Drawing.Size(30, 15);
-            this.lblQr.TabIndex = 4;
-            this.lblQr.Text = "QR:";
-            //
-            // txtLotNo
-            //
-            this.txtLotNo.Location = new System.Drawing.Point(110, 110);
-            this.txtLotNo.Name = "txtLotNo";
-            this.txtLotNo.Size = new System.Drawing.Size(210, 23);
-            this.txtLotNo.TabIndex = 3;
-            //
-            // lblLotNo
-            //
-            this.lblLotNo.AutoSize = true;
-            this.lblLotNo.Location = new System.Drawing.Point(15, 113);
-            this.lblLotNo.Name = "lblLotNo";
-            this.lblLotNo.Size = new System.Drawing.Size(60, 15);
-            this.lblLotNo.TabIndex = 2;
-            this.lblLotNo.Text = "LOT_NO:";
-            //
-            // txtPartNo
-            //
-            this.txtPartNo.Location = new System.Drawing.Point(110, 60);
-            this.txtPartNo.Name = "txtPartNo";
-            this.txtPartNo.Size = new System.Drawing.Size(210, 23);
-            this.txtPartNo.TabIndex = 1;
-            //
-            // lblPartNo
-            //
-            this.lblPartNo.AutoSize = true;
-            this.lblPartNo.Location = new System.Drawing.Point(15, 63);
-            this.lblPartNo.Name = "lblPartNo";
-            this.lblPartNo.Size = new System.Drawing.Size(65, 15);
-            this.lblPartNo.TabIndex = 0;
-            this.lblPartNo.Text = "PART_NO:";
             //
             // grpPrinter
             //
@@ -576,12 +517,6 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.NumericUpDown numLabelHeight;
         private System.Windows.Forms.ComboBox cmbLabelUnit;
         private System.Windows.Forms.GroupBox grpData;
-        private System.Windows.Forms.TextBox txtPartNo;
-        private System.Windows.Forms.Label lblPartNo;
-        private System.Windows.Forms.TextBox txtLotNo;
-        private System.Windows.Forms.Label lblLotNo;
-        private System.Windows.Forms.TextBox txtQr;
-        private System.Windows.Forms.Label lblQr;
         private System.Windows.Forms.Button btnGenerate;
         private System.Windows.Forms.Button btnPreview;
         private System.Windows.Forms.Button btnPrint;
