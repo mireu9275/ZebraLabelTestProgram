@@ -6,12 +6,18 @@ namespace ZebraLabelPrinter.UI.Forms
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null)) components.Dispose();
+            if (disposing)
+            {
+                if (components != null) components.Dispose();
+                if (_labelBitmap != null) { _labelBitmap.Dispose(); _labelBitmap = null; }
+            }
             base.Dispose(disposing);
         }
 
         private void InitializeComponent()
         {
+            this.pnlA4Canvas = new System.Windows.Forms.Panel();
+            this.pnlSettings = new System.Windows.Forms.Panel();
             this.lblPrinter = new System.Windows.Forms.Label();
             this.cmbPrinter = new System.Windows.Forms.ComboBox();
             this.lblPageType = new System.Windows.Forms.Label();
@@ -35,6 +41,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.lblGridInfo = new System.Windows.Forms.Label();
             this.btnPrint = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.pnlSettings.SuspendLayout();
             this.grpMargin.SuspendLayout();
             this.grpGap.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginL)).BeginInit();
@@ -46,26 +53,45 @@ namespace ZebraLabelPrinter.UI.Forms
             ((System.ComponentModel.ISupportInitialize)(this.numCount)).BeginInit();
             this.SuspendLayout();
 
-            // lblPrinter
+            // pnlA4Canvas
+            this.pnlA4Canvas.AutoScroll = true;
+            this.pnlA4Canvas.BackColor = System.Drawing.Color.LightGray;
+            this.pnlA4Canvas.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlA4Canvas.Location = new System.Drawing.Point(0, 0);
+            this.pnlA4Canvas.Name = "pnlA4Canvas";
+            this.pnlA4Canvas.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlA4Canvas_Paint);
+
+            // pnlSettings
+            this.pnlSettings.Controls.Add(this.lblPrinter);
+            this.pnlSettings.Controls.Add(this.cmbPrinter);
+            this.pnlSettings.Controls.Add(this.lblPageType);
+            this.pnlSettings.Controls.Add(this.cmbPageType);
+            this.pnlSettings.Controls.Add(this.grpMargin);
+            this.pnlSettings.Controls.Add(this.grpGap);
+            this.pnlSettings.Controls.Add(this.lblCount);
+            this.pnlSettings.Controls.Add(this.numCount);
+            this.pnlSettings.Controls.Add(this.lblGridInfo);
+            this.pnlSettings.Controls.Add(this.btnPrint);
+            this.pnlSettings.Controls.Add(this.btnCancel);
+            this.pnlSettings.Dock = System.Windows.Forms.DockStyle.Right;
+            this.pnlSettings.Width = 320;
+
+            // lblPrinter / cmbPrinter
             this.lblPrinter.AutoSize = true;
             this.lblPrinter.Location = new System.Drawing.Point(15, 18);
             this.lblPrinter.Text = "프린터:";
-
-            // cmbPrinter
             this.cmbPrinter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbPrinter.Location = new System.Drawing.Point(110, 15);
-            this.cmbPrinter.Size = new System.Drawing.Size(290, 23);
+            this.cmbPrinter.Location = new System.Drawing.Point(15, 38);
+            this.cmbPrinter.Size = new System.Drawing.Size(285, 23);
 
-            // lblPageType
+            // lblPageType / cmbPageType
             this.lblPageType.AutoSize = true;
-            this.lblPageType.Location = new System.Drawing.Point(15, 53);
+            this.lblPageType.Location = new System.Drawing.Point(15, 72);
             this.lblPageType.Text = "용지:";
-
-            // cmbPageType
             this.cmbPageType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbPageType.Items.AddRange(new object[] { "A4 (210×297mm)", "Letter (215.9×279.4mm)" });
-            this.cmbPageType.Location = new System.Drawing.Point(110, 50);
-            this.cmbPageType.Size = new System.Drawing.Size(200, 23);
+            this.cmbPageType.Location = new System.Drawing.Point(15, 92);
+            this.cmbPageType.Size = new System.Drawing.Size(285, 23);
             this.cmbPageType.SelectedIndexChanged += new System.EventHandler(this.OnSettingsChanged);
 
             // grpMargin
@@ -73,90 +99,80 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpMargin.Controls.Add(this.lblMT); this.grpMargin.Controls.Add(this.numMarginT);
             this.grpMargin.Controls.Add(this.lblMR); this.grpMargin.Controls.Add(this.numMarginR);
             this.grpMargin.Controls.Add(this.lblMB); this.grpMargin.Controls.Add(this.numMarginB);
-            this.grpMargin.Location = new System.Drawing.Point(15, 90);
-            this.grpMargin.Size = new System.Drawing.Size(200, 110);
+            this.grpMargin.Location = new System.Drawing.Point(15, 130);
+            this.grpMargin.Size = new System.Drawing.Size(285, 90);
             this.grpMargin.Text = "여백 (mm)";
 
-            // 여백 컨트롤
             this.lblML.AutoSize = true; this.lblML.Location = new System.Drawing.Point(15, 28); this.lblML.Text = "좌:";
             this.numMarginL.DecimalPlaces = 1; this.numMarginL.Location = new System.Drawing.Point(50, 25);
             this.numMarginL.Maximum = 200; this.numMarginL.Size = new System.Drawing.Size(60, 23);
             this.numMarginL.Value = 10; this.numMarginL.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
-            this.lblMT.AutoSize = true; this.lblMT.Location = new System.Drawing.Point(120, 28); this.lblMT.Text = "상:";
-            this.numMarginT.DecimalPlaces = 1; this.numMarginT.Location = new System.Drawing.Point(150, 25);
-            this.numMarginT.Maximum = 200; this.numMarginT.Size = new System.Drawing.Size(45, 23);
+            this.lblMT.AutoSize = true; this.lblMT.Location = new System.Drawing.Point(135, 28); this.lblMT.Text = "상:";
+            this.numMarginT.DecimalPlaces = 1; this.numMarginT.Location = new System.Drawing.Point(170, 25);
+            this.numMarginT.Maximum = 200; this.numMarginT.Size = new System.Drawing.Size(60, 23);
             this.numMarginT.Value = 10; this.numMarginT.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
-            this.lblMR.AutoSize = true; this.lblMR.Location = new System.Drawing.Point(15, 73); this.lblMR.Text = "우:";
-            this.numMarginR.DecimalPlaces = 1; this.numMarginR.Location = new System.Drawing.Point(50, 70);
+            this.lblMR.AutoSize = true; this.lblMR.Location = new System.Drawing.Point(15, 60); this.lblMR.Text = "우:";
+            this.numMarginR.DecimalPlaces = 1; this.numMarginR.Location = new System.Drawing.Point(50, 57);
             this.numMarginR.Maximum = 200; this.numMarginR.Size = new System.Drawing.Size(60, 23);
             this.numMarginR.Value = 10; this.numMarginR.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
-            this.lblMB.AutoSize = true; this.lblMB.Location = new System.Drawing.Point(120, 73); this.lblMB.Text = "하:";
-            this.numMarginB.DecimalPlaces = 1; this.numMarginB.Location = new System.Drawing.Point(150, 70);
-            this.numMarginB.Maximum = 200; this.numMarginB.Size = new System.Drawing.Size(45, 23);
+            this.lblMB.AutoSize = true; this.lblMB.Location = new System.Drawing.Point(135, 60); this.lblMB.Text = "하:";
+            this.numMarginB.DecimalPlaces = 1; this.numMarginB.Location = new System.Drawing.Point(170, 57);
+            this.numMarginB.Maximum = 200; this.numMarginB.Size = new System.Drawing.Size(60, 23);
             this.numMarginB.Value = 10; this.numMarginB.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
 
             // grpGap
             this.grpGap.Controls.Add(this.lblGX); this.grpGap.Controls.Add(this.numGapX);
             this.grpGap.Controls.Add(this.lblGY); this.grpGap.Controls.Add(this.numGapY);
-            this.grpGap.Location = new System.Drawing.Point(225, 90);
-            this.grpGap.Size = new System.Drawing.Size(175, 110);
+            this.grpGap.Location = new System.Drawing.Point(15, 230);
+            this.grpGap.Size = new System.Drawing.Size(285, 90);
             this.grpGap.Text = "라벨 간격 (mm)";
 
             this.lblGX.AutoSize = true; this.lblGX.Location = new System.Drawing.Point(15, 28); this.lblGX.Text = "가로:";
             this.numGapX.DecimalPlaces = 1; this.numGapX.Location = new System.Drawing.Point(60, 25);
             this.numGapX.Maximum = 50; this.numGapX.Size = new System.Drawing.Size(60, 23);
             this.numGapX.Value = 2; this.numGapX.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
-            this.lblGY.AutoSize = true; this.lblGY.Location = new System.Drawing.Point(15, 65); this.lblGY.Text = "세로:";
-            this.numGapY.DecimalPlaces = 1; this.numGapY.Location = new System.Drawing.Point(60, 62);
+            this.lblGY.AutoSize = true; this.lblGY.Location = new System.Drawing.Point(135, 28); this.lblGY.Text = "세로:";
+            this.numGapY.DecimalPlaces = 1; this.numGapY.Location = new System.Drawing.Point(180, 25);
             this.numGapY.Maximum = 50; this.numGapY.Size = new System.Drawing.Size(60, 23);
             this.numGapY.Value = 2; this.numGapY.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
 
             // lblCount + numCount
             this.lblCount.AutoSize = true;
-            this.lblCount.Location = new System.Drawing.Point(15, 220);
+            this.lblCount.Location = new System.Drawing.Point(15, 335);
             this.lblCount.Text = "출력 장수:";
-            this.numCount.Location = new System.Drawing.Point(110, 218);
+            this.numCount.Location = new System.Drawing.Point(110, 332);
             this.numCount.Minimum = 1; this.numCount.Maximum = 10000;
             this.numCount.Size = new System.Drawing.Size(80, 23);
             this.numCount.Value = 1;
             this.numCount.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
 
             // lblGridInfo
-            this.lblGridInfo.Location = new System.Drawing.Point(15, 255);
-            this.lblGridInfo.Size = new System.Drawing.Size(385, 50);
+            this.lblGridInfo.Location = new System.Drawing.Point(15, 370);
+            this.lblGridInfo.Size = new System.Drawing.Size(285, 70);
             this.lblGridInfo.ForeColor = System.Drawing.Color.DarkBlue;
 
             // 버튼
-            this.btnPrint.Location = new System.Drawing.Point(195, 315);
-            this.btnPrint.Size = new System.Drawing.Size(110, 35);
+            this.btnPrint.Location = new System.Drawing.Point(15, 460);
+            this.btnPrint.Size = new System.Drawing.Size(180, 40);
             this.btnPrint.Text = "미리보기 ▶ 출력";
             this.btnPrint.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnPrint.Click += new System.EventHandler(this.btnPrint_Click);
-            this.btnCancel.Location = new System.Drawing.Point(315, 315);
-            this.btnCancel.Size = new System.Drawing.Size(85, 35);
-            this.btnCancel.Text = "취소";
+            this.btnCancel.Location = new System.Drawing.Point(210, 460);
+            this.btnCancel.Size = new System.Drawing.Size(90, 40);
+            this.btnCancel.Text = "닫기";
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
 
             // 폼
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(420, 365);
-            this.Controls.Add(this.lblPrinter);
-            this.Controls.Add(this.cmbPrinter);
-            this.Controls.Add(this.lblPageType);
-            this.Controls.Add(this.cmbPageType);
-            this.Controls.Add(this.grpMargin);
-            this.Controls.Add(this.grpGap);
-            this.Controls.Add(this.lblCount);
-            this.Controls.Add(this.numCount);
-            this.Controls.Add(this.lblGridInfo);
-            this.Controls.Add(this.btnPrint);
-            this.Controls.Add(this.btnCancel);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            this.ClientSize = new System.Drawing.Size(960, 700);
+            this.Controls.Add(this.pnlA4Canvas);
+            this.Controls.Add(this.pnlSettings);
+            this.MinimumSize = new System.Drawing.Size(800, 550);
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "A4 시트 출력";
+            this.Text = "A4 시트 디자이너";
+            this.pnlSettings.ResumeLayout(false);
+            this.pnlSettings.PerformLayout();
             this.grpMargin.ResumeLayout(false);
             this.grpMargin.PerformLayout();
             this.grpGap.ResumeLayout(false);
@@ -169,9 +185,10 @@ namespace ZebraLabelPrinter.UI.Forms
             ((System.ComponentModel.ISupportInitialize)(this.numGapY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numCount)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
         }
 
+        private System.Windows.Forms.Panel pnlA4Canvas;
+        private System.Windows.Forms.Panel pnlSettings;
         private System.Windows.Forms.Label lblPrinter;
         private System.Windows.Forms.ComboBox cmbPrinter;
         private System.Windows.Forms.Label lblPageType;
