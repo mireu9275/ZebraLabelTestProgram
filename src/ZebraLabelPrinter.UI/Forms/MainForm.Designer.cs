@@ -98,6 +98,9 @@ namespace ZebraLabelPrinter.UI.Forms
             this.splitContainer.Panel2.Controls.Add(this.tabRight);
             this.splitContainer.Size = new System.Drawing.Size(1100, 678);
             this.splitContainer.SplitterDistance = 360;
+            this.splitContainer.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
+            this.splitContainer.IsSplitterFixed = true;
+            this.splitContainer.SplitterWidth = 1;
             this.splitContainer.TabIndex = 0;
             //
             // panelLeft
