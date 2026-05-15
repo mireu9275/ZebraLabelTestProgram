@@ -19,7 +19,6 @@ namespace ZebraLabelPrinter.UI.Forms
         private readonly LabelPreviewService _previewService = new LabelPreviewService();
         private readonly KoreanFontProfile _printerProfile = KoreanFontProfile.Kfont3();
         private readonly KoreanFontProfile _previewProfile = KoreanFontProfile.Default();
-        private string _lastZplForPrinter;
 
         public MainForm()
         {
@@ -103,14 +102,21 @@ namespace ZebraLabelPrinter.UI.Forms
             return builder.Build(CollectData(), CurrentTargetDpi(), profile);
         }
 
+        private string CurrentZplFromTextBox()
+        {
+            // 사용자가 편집한 내용을 우선. Format() 줄바꿈은 ZPL에 영향 없지만 그대로 보내도 됨.
+            var text = txtZpl.Text;
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
         private void btnGenerate_Click(object sender, EventArgs e)
         {
             try
             {
-                _lastZplForPrinter = BuildZpl(_printerProfile);
-                txtZpl.Text = ZplLabelBuilder.Format(_lastZplForPrinter);
+                var zpl = BuildZpl(_printerProfile);
+                txtZpl.Text = ZplLabelBuilder.Format(zpl);
                 tabRight.SelectedTab = tabZpl;
-                SetStatus("ZPL 생성 완료 — " + _printerProfile.DisplayName + " (" + _lastZplForPrinter.Length + " bytes)");
+                SetStatus("ZPL 생성 완료 — " + _printerProfile.DisplayName + " (" + zpl.Length + " bytes). 텍스트박스를 직접 편집해도 미리보기/출력에 반영됨");
             }
             catch (Exception ex)
             {
@@ -122,18 +128,20 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             try
             {
-                // 미리보기는 별도 프로파일로 — BinaryKits.Zpl.Viewer가 ^CI26/^SE/^CW를 해석하지
-                // 못해서 KFONT3 출력용 ZPL을 그대로 렌더할 수 없음. UTF-8/^A0 프로파일로 빌드해서
-                // FontStack fallback(맑은 고딕 등)으로 한글 표시.
-                var previewZpl = BuildZpl(_previewProfile);
+                // 우선순위: 1) 텍스트박스 편집 내용 2) 비어있으면 preview profile로 새로 빌드
+                var zplToRender = CurrentZplFromTextBox();
+                var usingPreviewProfile = false;
 
-                // ZPL 탭에는 실제 인쇄될 프린터 프로파일 ZPL을 보여줌
-                if (string.IsNullOrEmpty(_lastZplForPrinter)) _lastZplForPrinter = BuildZpl(_printerProfile);
-                txtZpl.Text = ZplLabelBuilder.Format(_lastZplForPrinter);
+                if (zplToRender == null)
+                {
+                    zplToRender = BuildZpl(_previewProfile);
+                    txtZpl.Text = ZplLabelBuilder.Format(zplToRender);
+                    usingPreviewProfile = true;
+                }
 
                 var dpi = CurrentTargetDpi();
                 var dpmm = Math.Max(1, dpi / 25);
-                var png = _previewService.RenderPng(previewZpl, _template.WidthDots, _template.HeightDots, dpmm);
+                var png = _previewService.RenderPng(zplToRender, _template.WidthDots, _template.HeightDots, dpmm);
 
                 using (var ms = new MemoryStream(png))
                 {
@@ -141,7 +149,11 @@ namespace ZebraLabelPrinter.UI.Forms
                     picPreview.Image = Image.FromStream(ms);
                 }
                 tabRight.SelectedTab = tabPreview;
-                SetStatus("미리보기 렌더 완료 (preview ZPL 별도 — " + previewZpl.Length + " bytes)");
+
+                var warn = !usingPreviewProfile && zplToRender.IndexOf("^CI26", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? " — 주의: ^CI26 ZPL은 viewer가 한글 디코딩 못함(프린터는 정상). 한글 확인하려면 ZPL 비우고 다시 미리보기."
+                    : "";
+                SetStatus("미리보기 렌더 완료 (" + zplToRender.Length + " bytes)" + warn);
             }
             catch (Exception ex)
             {
@@ -161,8 +173,8 @@ namespace ZebraLabelPrinter.UI.Forms
                     return;
                 }
 
-                // 항상 최신 데이터로 프린터용 ZPL을 다시 빌드 (^CI26 + ^A1 + KFONT3)
-                _lastZplForPrinter = BuildZpl(_printerProfile);
+                // 텍스트박스에 있으면 그것 그대로, 없으면 printer profile로 빌드
+                var zplToPrint = CurrentZplFromTextBox() ?? BuildZpl(_printerProfile);
 
                 var config = new PrinterConfig
                 {
@@ -172,10 +184,10 @@ namespace ZebraLabelPrinter.UI.Forms
                 };
 
                 IPrinterClient client = new WindowsSpoolerClient();
-                var result = client.Send(config, _lastZplForPrinter);
+                var result = client.Send(config, zplToPrint);
                 if (result.Success)
                 {
-                    SetStatus("출력 완료 — " + printerName + " (" + result.BytesSent + " bytes, " + _printerProfile.DisplayName + ")");
+                    SetStatus("출력 완료 — " + printerName + " (" + result.BytesSent + " bytes)");
                 }
                 else
                 {

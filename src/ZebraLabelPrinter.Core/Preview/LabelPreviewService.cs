@@ -35,9 +35,9 @@ namespace ZebraLabelPrinter.Core.Preview
 
             var options = new DrawerOptions
             {
-                OpaqueBackground = true,
-                FontManager = BuildFontManager()
+                OpaqueBackground = true
             };
+            ApplyPreferredFonts(options.FontManager);
 
             var widthMm = labelWidthDots / (double)printDensityDpmm;
             var heightMm = labelHeightDots / (double)printDensityDpmm;
@@ -52,14 +52,12 @@ namespace ZebraLabelPrinter.Core.Preview
             File.WriteAllBytes(outputPath, bytes);
         }
 
-        private FontManager BuildFontManager()
+        private void ApplyPreferredFonts(FontManager fm)
         {
-            var fm = new FontManager();
-            if (_preferredFontFamilies.Count == 0) return fm;
+            if (fm == null || _preferredFontFamilies.Count == 0) return;
 
             fm.FontStack0 = _preferredFontFamilies.Concat(fm.FontStack0 ?? new List<string>()).Distinct().ToList();
             fm.FontStackA = _preferredFontFamilies.Concat(fm.FontStackA ?? new List<string>()).Distinct().ToList();
-            return fm;
         }
     }
 }
