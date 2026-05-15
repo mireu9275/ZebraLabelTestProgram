@@ -46,6 +46,11 @@ namespace ZebraLabelPrinter.UI.Forms
         private const double MaxZoom = 4.0;
         private const int SnapGrid = 10;    // 라벨 dots 기준 스냅 단위
         private bool _suppressLabelSizeHandler;
+        // 미리보기 탭 줌 상태
+        private double _previewZoom = 1.0;
+        private Size _previewNaturalSize;
+        private const double MinPreviewZoom = 0.1;
+        private const double MaxPreviewZoom = 5.0;
 
         public MainForm()
         {
@@ -73,6 +78,10 @@ namespace ZebraLabelPrinter.UI.Forms
             pnlCanvas.MouseWheel += new MouseEventHandler(pnlCanvas_MouseWheel);
             this.KeyPreview = true;
             this.KeyDown += new KeyEventHandler(MainForm_KeyDown);
+
+            // 미리보기 탭 줌: 탭과 PictureBox 둘 다에 휠 핸들러 (마우스 위치에 따라 어디로 갈지 모름)
+            tabPreview.MouseWheel += new MouseEventHandler(Preview_MouseWheel);
+            picPreview.MouseWheel += new MouseEventHandler(Preview_MouseWheel);
 
             // 라벨 크기 입력 초기화 (mm 기본)
             _suppressLabelSizeHandler = true;
@@ -365,9 +374,11 @@ namespace ZebraLabelPrinter.UI.Forms
                 {
                     if (picPreview.Image != null) picPreview.Image.Dispose();
                     picPreview.Image = Image.FromStream(ms);
+                    _previewNaturalSize = picPreview.Image.Size;
                 }
+                ApplyPreviewZoom();
                 tabRight.SelectedTab = tabPreview;
-                SetStatus("미리보기 렌더 완료 (" + zplToRender.Length + " bytes)");
+                SetStatus("미리보기 렌더 완료 (" + zplToRender.Length + " bytes) — Ctrl+휠로 확대/축소");
             }
             catch (Exception ex)
             {
@@ -418,6 +429,26 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             LoadInstalledPrinters();
             SetStatus("프린터 목록 새로고침: " + cmbPrinter.Items.Count + "개");
+        }
+
+        private void ApplyPreviewZoom()
+        {
+            if (picPreview.Image == null || _previewNaturalSize.IsEmpty) return;
+            var w = Math.Max(1, (int)Math.Round(_previewNaturalSize.Width * _previewZoom));
+            var h = Math.Max(1, (int)Math.Round(_previewNaturalSize.Height * _previewZoom));
+            picPreview.Size = new Size(w, h);
+        }
+
+        private void Preview_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if ((Control.ModifierKeys & Keys.Control) != Keys.Control) return;
+            if (picPreview.Image == null) return;
+            var factor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
+            var newZoom = Math.Min(MaxPreviewZoom, Math.Max(MinPreviewZoom, _previewZoom * factor));
+            if (Math.Abs(newZoom - _previewZoom) < 1e-6) return;
+            _previewZoom = newZoom;
+            ApplyPreviewZoom();
+            SetStatus("미리보기 줌: " + (_previewZoom * 100).ToString("0") + "%");
         }
 
         private void SetStatus(string text)

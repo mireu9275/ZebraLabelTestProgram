@@ -334,12 +334,13 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabPreview.TabIndex = 0;
             this.tabPreview.Text = "미리보기";
             //
-            // picPreview — SizeMode=AutoSize 로 라벨 PNG 자연 크기 그대로 표시
+            // picPreview — SizeMode=Zoom + 수동 Size로 _previewZoom 따라 PictureBox 크기 조정
             //
             this.picPreview.BackColor = System.Drawing.Color.White;
             this.picPreview.Location = new System.Drawing.Point(10, 10);
             this.picPreview.Name = "picPreview";
-            this.picPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
+            this.picPreview.Size = new System.Drawing.Size(1, 1);
+            this.picPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.picPreview.TabIndex = 0;
             this.picPreview.TabStop = false;
             //
