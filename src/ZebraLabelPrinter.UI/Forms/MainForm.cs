@@ -61,14 +61,6 @@ namespace ZebraLabelPrinter.UI.Forms
             pnlCanvas.MouseWheel += new MouseEventHandler(pnlCanvas_MouseWheel);
             this.KeyPreview = true;
             this.KeyDown += new KeyEventHandler(MainForm_KeyDown);
-        }
-
-        private static void EnableDoubleBuffering(Control control)
-        {
-            typeof(Control)
-                .GetProperty("DoubleBuffered",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                ?.SetValue(control, true);
 
             // 라벨 크기 입력 초기화 (mm 기본)
             _suppressLabelSizeHandler = true;
@@ -80,6 +72,14 @@ namespace ZebraLabelPrinter.UI.Forms
                 numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
             }
             finally { _suppressLabelSizeHandler = false; }
+        }
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            typeof(Control)
+                .GetProperty("DoubleBuffered",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(control, true);
         }
 
         private void ResizeCanvasToLabel()
