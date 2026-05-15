@@ -124,6 +124,15 @@ namespace ZebraLabelPrinter.Core.Builders
                     break;
 
                 case LabelFieldType.Image:
+                    if (!string.IsNullOrEmpty(field.ImagePath))
+                    {
+                        var imgW = field.Width > 0 ? Scale(field.Width, scale) : 0;
+                        var imgH = field.Height > 0 ? Scale(field.Height, scale) : 0;
+                        var gfa = ZplImageEncoder.ToGfa(field.ImagePath,
+                            imgW > 0 ? (int?)imgW : null,
+                            imgH > 0 ? (int?)imgH : null);
+                        if (!string.IsNullOrEmpty(gfa)) sb.Append(gfa);
+                    }
                     sb.Append("^FS");
                     break;
             }

@@ -54,6 +54,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnAddBarcode = new System.Windows.Forms.ToolStripButton();
             this.btnAddQr = new System.Windows.Forms.ToolStripButton();
             this.btnAddBox = new System.Windows.Forms.ToolStripButton();
+            this.btnAddImage = new System.Windows.Forms.ToolStripButton();
             this.btnAddHLine = new System.Windows.Forms.ToolStripButton();
             this.btnAddVLine = new System.Windows.Forms.ToolStripButton();
             this.toolSep1 = new System.Windows.Forms.ToolStripSeparator();
@@ -66,6 +67,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.toolSep3 = new System.Windows.Forms.ToolStripSeparator();
             this.btnSaveTemplate = new System.Windows.Forms.ToolStripButton();
             this.btnLoadTemplate = new System.Windows.Forms.ToolStripButton();
+            this.btnExportCode = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
@@ -423,10 +425,10 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.toolStripDesigner.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.btnAddText, this.btnAddBarcode, this.btnAddQr, this.btnAddBox,
-                this.btnAddHLine, this.btnAddVLine,
+                this.btnAddImage, this.btnAddHLine, this.btnAddVLine,
                 this.toolSep1, this.btnBringToFront, this.btnSendToBack, this.btnRotate,
                 this.toolSep2, this.btnDeleteField, this.btnClearAll,
-                this.toolSep3, this.btnSaveTemplate, this.btnLoadTemplate });
+                this.toolSep3, this.btnSaveTemplate, this.btnLoadTemplate, this.btnExportCode });
             this.toolStripDesigner.Location = new System.Drawing.Point(3, 3);
             this.toolStripDesigner.Name = "toolStripDesigner";
             this.toolStripDesigner.Size = new System.Drawing.Size(722, 25);
@@ -463,6 +465,15 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnAddBox.Size = new System.Drawing.Size(60, 22);
             this.btnAddBox.Text = "+ 박스";
             this.btnAddBox.Click += new System.EventHandler(this.btnAddBox_Click);
+            //
+            // btnAddImage
+            //
+            this.btnAddImage.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddImage.Name = "btnAddImage";
+            this.btnAddImage.Size = new System.Drawing.Size(75, 22);
+            this.btnAddImage.Text = "+ 이미지";
+            this.btnAddImage.ToolTipText = "이미지 파일을 라벨에 추가 (PNG/JPG/BMP — ZPL ^GFA로 인코딩됨)";
+            this.btnAddImage.Click += new System.EventHandler(this.btnAddImage_Click);
             //
             // btnAddHLine
             //
@@ -557,6 +568,15 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnLoadTemplate.Text = "📂 불러오기";
             this.btnLoadTemplate.ToolTipText = ".zlbl 파일에서 디자이너 템플릿 복원";
             this.btnLoadTemplate.Click += new System.EventHandler(this.btnLoadTemplate_Click);
+            //
+            // btnExportCode
+            //
+            this.btnExportCode.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnExportCode.Name = "btnExportCode";
+            this.btnExportCode.Size = new System.Drawing.Size(95, 22);
+            this.btnExportCode.Text = "{ } C# 코드";
+            this.btnExportCode.ToolTipText = "현재 템플릿을 다시 만드는 C# 코드 생성 — 내 ERP/MES에 붙여넣기";
+            this.btnExportCode.Click += new System.EventHandler(this.btnExportCode_Click);
             //
             // splitDesigner
             //
@@ -684,6 +704,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.ToolStripButton btnAddBarcode;
         private System.Windows.Forms.ToolStripButton btnAddQr;
         private System.Windows.Forms.ToolStripButton btnAddBox;
+        private System.Windows.Forms.ToolStripButton btnAddImage;
         private System.Windows.Forms.ToolStripButton btnAddHLine;
         private System.Windows.Forms.ToolStripButton btnAddVLine;
         private System.Windows.Forms.ToolStripSeparator toolSep1;
@@ -696,6 +717,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.ToolStripSeparator toolSep3;
         private System.Windows.Forms.ToolStripButton btnSaveTemplate;
         private System.Windows.Forms.ToolStripButton btnLoadTemplate;
+        private System.Windows.Forms.ToolStripButton btnExportCode;
         private System.Windows.Forms.SplitContainer splitDesigner;
         private System.Windows.Forms.Panel pnlCanvas;
         private System.Windows.Forms.PropertyGrid pgFieldProps;

@@ -661,6 +661,11 @@ namespace ZebraLabelPrinter.UI.Forms
                     h = Math.Max(f.Height, 10);
                     break;
 
+                case LabelFieldType.Image:
+                    w = Math.Max(f.Width, 50);
+                    h = Math.Max(f.Height, 50);
+                    break;
+
                 default:
                     w = h = 40; break;
             }
@@ -825,6 +830,22 @@ namespace ZebraLabelPrinter.UI.Forms
         private void DrawField(Graphics g, LabelField field, bool selected, bool faded = false)
         {
             var r = FieldRect(field);
+
+            // 이미지 필드는 실제 이미지를 캔버스에 그림 (없으면 회색 박스)
+            if (field.FieldType == LabelFieldType.Image && !string.IsNullOrEmpty(field.ImagePath) && File.Exists(field.ImagePath))
+            {
+                try
+                {
+                    using (var img = Image.FromFile(field.ImagePath))
+                    {
+                        var attrs = new System.Drawing.Imaging.ImageAttributes();
+                        if (faded) attrs.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix { Matrix33 = 0.4f });
+                        g.DrawImage(img, r, 0, 0, img.Width, img.Height, GraphicsUnit.Pixel, attrs);
+                    }
+                }
+                catch { /* 손상된 이미지 — 아래 박스 그리기로 fallback */ }
+            }
+
             var fillAlpha = faded ? 15 : 40;
             var fillColor = selected ? Color.DodgerBlue : Color.Gray;
             using (var fill = new SolidBrush(Color.FromArgb(fillAlpha, fillColor)))
@@ -1208,6 +1229,14 @@ namespace ZebraLabelPrinter.UI.Forms
             }
         }
 
+        private void btnExportCode_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new CodeExportForm(_template))
+            {
+                dlg.ShowDialog(this);
+            }
+        }
+
         private void btnBringToFront_Click(object sender, EventArgs e)
         {
             if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
@@ -1294,6 +1323,48 @@ namespace ZebraLabelPrinter.UI.Forms
         private void btnAddBox_Click(object sender, EventArgs e) { AddField(LabelFieldType.Box); }
         private void btnAddHLine_Click(object sender, EventArgs e) { AddLine(horizontal: true); }
         private void btnAddVLine_Click(object sender, EventArgs e) { AddLine(horizontal: false); }
+
+        private void btnAddImage_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new OpenFileDialog
+            {
+                Filter = "이미지 (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|모든 파일 (*.*)|*.*",
+                Title = "이미지 선택"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                int w = 200, h = 100;
+                try
+                {
+                    using (var probe = Image.FromFile(dlg.FileName))
+                    {
+                        // 원본 비율 유지하며 최대 300x300에 맞춰 초기 크기 결정
+                        var maxDim = 300;
+                        var ratio = Math.Min((double)maxDim / probe.Width, (double)maxDim / probe.Height);
+                        if (ratio > 1) ratio = 1;
+                        w = Math.Max(10, (int)(probe.Width * ratio));
+                        h = Math.Max(10, (int)(probe.Height * ratio));
+                    }
+                }
+                catch { /* 비표준 이미지 — 기본 크기 사용 */ }
+
+                var name = "Image" + (_template.Fields.Count + 1);
+                var f = new LabelField
+                {
+                    Name = name,
+                    FieldType = LabelFieldType.Image,
+                    X = 50, Y = 50,
+                    Width = w, Height = h,
+                    ImagePath = dlg.FileName
+                };
+                _template.Fields.Add(f);
+                SelectField(f);
+                RebuildDataBindings();
+                RegenerateZplFromTemplate();
+                MarkDirty();
+            }
+        }
 
         private void AddLine(bool horizontal)
         {
