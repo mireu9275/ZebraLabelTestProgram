@@ -83,16 +83,31 @@ namespace ZebraLabelPrinter.UI.Forms
             tabPreview.MouseWheel += new MouseEventHandler(Preview_MouseWheel);
             picPreview.MouseWheel += new MouseEventHandler(Preview_MouseWheel);
 
-            // 라벨 크기 입력 초기화 (mm 기본)
+            // 라벨 크기 입력 초기화 (mm 기본).
+            // ⚠️ dots×(25.4/203) 결과가 100.0985... 같이 미세 소수점 → 표시 "100.1"로 보이고
+            // 사용자가 직접 입력하면 round-trip 오차로 dots가 매번 바뀜. 정수 mm로 정합 잡아 시작.
             _suppressLabelSizeHandler = true;
             try
             {
                 cmbLabelUnit.SelectedItem = "mm";
                 if (cmbLabelUnit.SelectedIndex < 0) cmbLabelUnit.SelectedIndex = 0;
-                numLabelWidth.Value = (decimal)DotsToUnit(_template.WidthDots);
-                numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
+                var widthMm = ClampNum(numLabelWidth, Math.Round((decimal)DotsToUnit(_template.WidthDots)));
+                var heightMm = ClampNum(numLabelHeight, Math.Round((decimal)DotsToUnit(_template.HeightDots)));
+                numLabelWidth.Value = widthMm;
+                numLabelHeight.Value = heightMm;
+                // 표시값에 맞춰 dots도 재계산 (정합 유지)
+                _template.WidthDots = UnitToDots(widthMm);
+                _template.HeightDots = UnitToDots(heightMm);
+                ResizeCanvasToLabel();
             }
             finally { _suppressLabelSizeHandler = false; }
+        }
+
+        private static decimal ClampNum(NumericUpDown nud, decimal value)
+        {
+            if (value < nud.Minimum) return nud.Minimum;
+            if (value > nud.Maximum) return nud.Maximum;
+            return value;
         }
 
         private static void EnableDoubleBuffering(Control control)
@@ -105,9 +120,19 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void ResizeCanvasToLabel()
         {
-            var w = (int)Math.Round(_template.WidthDots * _canvasZoom) + CanvasPadding * 2;
-            var h = (int)Math.Round(_template.HeightDots * _canvasZoom) + CanvasPadding * 2;
-            pnlCanvas.Size = new Size(w, h);
+            try
+            {
+                // 음수/0/오버플로 방지: 최소 50 pixel, 최대 50000 pixel
+                var rawW = (long)Math.Round(_template.WidthDots * _canvasZoom) + CanvasPadding * 2;
+                var rawH = (long)Math.Round(_template.HeightDots * _canvasZoom) + CanvasPadding * 2;
+                var w = (int)Math.Max(50, Math.Min(50000, rawW));
+                var h = (int)Math.Max(50, Math.Min(50000, rawH));
+                pnlCanvas.Size = new Size(w, h);
+            }
+            catch (Exception ex)
+            {
+                SetStatus("캔버스 리사이즈 실패: " + ex.Message);
+            }
         }
 
         private double MmPerDot()
@@ -132,25 +157,44 @@ namespace ZebraLabelPrinter.UI.Forms
         private void OnLabelSizeChanged(object sender, EventArgs e)
         {
             if (_suppressLabelSizeHandler) return;
-            _template.WidthDots = UnitToDots(numLabelWidth.Value);
-            _template.HeightDots = UnitToDots(numLabelHeight.Value);
-            ResizeCanvasToLabel();
-            pnlCanvas.Invalidate();
-            RegenerateZplFromTemplate();
-            MarkDirty();
+            try
+            {
+                var w = UnitToDots(numLabelWidth.Value);
+                var h = UnitToDots(numLabelHeight.Value);
+                // 비정상값 방어
+                if (w < 1) w = 1;
+                if (h < 1) h = 1;
+                _template.WidthDots = w;
+                _template.HeightDots = h;
+                ResizeCanvasToLabel();
+                pnlCanvas.Invalidate();
+                RegenerateZplFromTemplate();
+                MarkDirty();
+            }
+            catch (Exception ex)
+            {
+                SetStatus("라벨 크기 변경 실패: " + ex.Message);
+            }
         }
 
         private void OnLabelUnitChanged(object sender, EventArgs e)
         {
             if (_suppressLabelSizeHandler) return;
-            // 단위 변경 시 dots는 그대로, NumericUpDown 표시값만 단위에 맞춰 다시 채움
-            _suppressLabelSizeHandler = true;
             try
             {
-                numLabelWidth.Value = (decimal)DotsToUnit(_template.WidthDots);
-                numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
+                // 단위 변경 시 dots는 그대로, NumericUpDown 표시값만 단위에 맞춰 다시 채움
+                _suppressLabelSizeHandler = true;
+                try
+                {
+                    numLabelWidth.Value = ClampNum(numLabelWidth, Math.Round((decimal)DotsToUnit(_template.WidthDots), 1));
+                    numLabelHeight.Value = ClampNum(numLabelHeight, Math.Round((decimal)DotsToUnit(_template.HeightDots), 1));
+                }
+                finally { _suppressLabelSizeHandler = false; }
             }
-            finally { _suppressLabelSizeHandler = false; }
+            catch (Exception ex)
+            {
+                SetStatus("단위 변경 실패: " + ex.Message);
+            }
         }
 
         private void LoadDefaults()
@@ -594,6 +638,20 @@ namespace ZebraLabelPrinter.UI.Forms
         }
 
         private void pnlCanvas_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                DoPaint(e);
+            }
+            catch (Exception ex)
+            {
+                // Paint에서 예외가 폼 밖으로 propagate되면 무한 재페인트 → 앱 다운.
+                // status에만 표시하고 화면은 비워둠.
+                SetStatus("렌더링 오류: " + ex.Message);
+            }
+        }
+
+        private void DoPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             // 그래픽스에 줌 + 패딩 transform 적용 → 이후 좌표는 라벨 dots 기준
