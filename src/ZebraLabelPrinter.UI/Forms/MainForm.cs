@@ -475,6 +475,21 @@ namespace ZebraLabelPrinter.UI.Forms
             SetStatus("프린터 목록 새로고침: " + cmbPrinter.Items.Count + "개");
         }
 
+        private void btnPrintSheet_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var dlg = new SheetPrintForm(_template, _profile, _previewService, CollectData()))
+                {
+                    dlg.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError("A4 출력 다이얼로그 열기 실패", ex);
+            }
+        }
+
         private void ApplyPreviewZoom()
         {
             if (picPreview.Image == null || _previewNaturalSize.IsEmpty) return;

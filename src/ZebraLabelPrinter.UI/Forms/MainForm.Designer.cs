@@ -20,6 +20,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.splitContainer = new System.Windows.Forms.SplitContainer();
             this.panelLeft = new System.Windows.Forms.Panel();
             this.btnPrint = new System.Windows.Forms.Button();
+            this.btnPrintSheet = new System.Windows.Forms.Button();
             this.btnPreview = new System.Windows.Forms.Button();
             this.btnGenerate = new System.Windows.Forms.Button();
             this.grpData = new System.Windows.Forms.GroupBox();
@@ -106,6 +107,7 @@ namespace ZebraLabelPrinter.UI.Forms
             // panelLeft
             //
             this.panelLeft.Controls.Add(this.btnPrint);
+            this.panelLeft.Controls.Add(this.btnPrintSheet);
             this.panelLeft.Controls.Add(this.btnPreview);
             this.panelLeft.Controls.Add(this.btnGenerate);
             this.panelLeft.Controls.Add(this.grpData);
@@ -123,11 +125,22 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnPrint.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnPrint.Location = new System.Drawing.Point(12, 615);
             this.btnPrint.Name = "btnPrint";
-            this.btnPrint.Size = new System.Drawing.Size(330, 44);
+            this.btnPrint.Size = new System.Drawing.Size(162, 44);
             this.btnPrint.TabIndex = 4;
-            this.btnPrint.Text = "프린터로 전송";
+            this.btnPrint.Text = "Zebra 전송";
             this.btnPrint.UseVisualStyleBackColor = true;
             this.btnPrint.Click += new System.EventHandler(this.btnPrint_Click);
+            //
+            // btnPrintSheet
+            //
+            this.btnPrintSheet.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnPrintSheet.Location = new System.Drawing.Point(180, 615);
+            this.btnPrintSheet.Name = "btnPrintSheet";
+            this.btnPrintSheet.Size = new System.Drawing.Size(162, 44);
+            this.btnPrintSheet.TabIndex = 5;
+            this.btnPrintSheet.Text = "A4 시트 출력";
+            this.btnPrintSheet.UseVisualStyleBackColor = true;
+            this.btnPrintSheet.Click += new System.EventHandler(this.btnPrintSheet_Click);
             //
             // btnPreview
             //
@@ -630,6 +643,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.Button btnGenerate;
         private System.Windows.Forms.Button btnPreview;
         private System.Windows.Forms.Button btnPrint;
+        private System.Windows.Forms.Button btnPrintSheet;
         private System.Windows.Forms.TabControl tabRight;
         private System.Windows.Forms.TabPage tabPreview;
         private System.Windows.Forms.PictureBox picPreview;
