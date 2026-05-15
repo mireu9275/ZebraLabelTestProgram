@@ -70,7 +70,7 @@ namespace ZebraLabelPrinter.Core.Builders
                     sb.Append("^A").Append(profile.FontAlias).Append(rot).Append(',')
                       .Append(Scale(field.FontHeight, scale)).Append(',')
                       .Append(Scale(field.FontWidth, scale));
-                    sb.Append("^FH^FD").Append(EncodeText(value, profile.TextEncoding)).Append("^FS");
+                    sb.Append("^FH^FD").Append(EncodeText(value)).Append("^FS");
                     break;
 
                 case LabelFieldType.Barcode128:
@@ -129,22 +129,17 @@ namespace ZebraLabelPrinter.Core.Builders
             return (int)Math.Round(v * scale, MidpointRounding.AwayFromZero);
         }
 
-        private static string EncodeText(string value, Encoding encoding)
+        private static string EncodeText(string value)
         {
             if (string.IsNullOrEmpty(value)) return string.Empty;
-            var enc = encoding ?? Encoding.UTF8;
             var sb = new StringBuilder(value.Length);
             foreach (var ch in value)
             {
+                // ^FH 모드에서 ZPL 컨트롤 문자(^/~/\\)만 hex escape, 한글 등은 raw 유지.
+                // 전송 시 UTF-8 바이트로 나가고 프린터의 ^CI28 모드가 해석.
                 if (ch == '^' || ch == '~' || ch == '\\')
                 {
                     sb.Append('_').Append(((int)ch).ToString("X2", CultureInfo.InvariantCulture));
-                }
-                else if (ch > 0x7F)
-                {
-                    var bytes = enc.GetBytes(new[] { ch });
-                    foreach (var b in bytes)
-                        sb.Append('_').Append(b.ToString("X2", CultureInfo.InvariantCulture));
                 }
                 else
                 {
