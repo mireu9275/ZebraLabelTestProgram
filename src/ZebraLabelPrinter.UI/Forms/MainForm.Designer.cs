@@ -26,6 +26,8 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpData = new System.Windows.Forms.GroupBox();
             this.pnlDataBindings = new System.Windows.Forms.Panel();
             this.grpLabelSize = new System.Windows.Forms.GroupBox();
+            this.lblPreset = new System.Windows.Forms.Label();
+            this.cmbSizePreset = new System.Windows.Forms.ComboBox();
             this.numLabelWidth = new System.Windows.Forms.NumericUpDown();
             this.lblLabelWidth = new System.Windows.Forms.Label();
             this.lblLabelTimes = new System.Windows.Forms.Label();
@@ -165,9 +167,9 @@ namespace ZebraLabelPrinter.UI.Forms
             // grpData (동적 데이터 바인딩 입력 — MainForm.RebuildDataBindings에서 컨트롤 생성)
             //
             this.grpData.Controls.Add(this.pnlDataBindings);
-            this.grpData.Location = new System.Drawing.Point(12, 305);
+            this.grpData.Location = new System.Drawing.Point(12, 340);
             this.grpData.Name = "grpData";
-            this.grpData.Size = new System.Drawing.Size(330, 245);
+            this.grpData.Size = new System.Drawing.Size(330, 210);
             this.grpData.TabIndex = 1;
             this.grpData.TabStop = false;
             this.grpData.Text = "데이터 바인딩";
@@ -177,7 +179,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.pnlDataBindings.AutoScroll = true;
             this.pnlDataBindings.Location = new System.Drawing.Point(5, 20);
             this.pnlDataBindings.Name = "pnlDataBindings";
-            this.pnlDataBindings.Size = new System.Drawing.Size(320, 220);
+            this.pnlDataBindings.Size = new System.Drawing.Size(320, 185);
             this.pnlDataBindings.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                 | System.Windows.Forms.AnchorStyles.Left)
                 | System.Windows.Forms.AnchorStyles.Right)));
@@ -199,6 +201,8 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             // grpLabelSize
             //
+            this.grpLabelSize.Controls.Add(this.lblPreset);
+            this.grpLabelSize.Controls.Add(this.cmbSizePreset);
             this.grpLabelSize.Controls.Add(this.lblLabelWidth);
             this.grpLabelSize.Controls.Add(this.numLabelWidth);
             this.grpLabelSize.Controls.Add(this.lblLabelTimes);
@@ -207,15 +211,38 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpLabelSize.Controls.Add(this.cmbLabelUnit);
             this.grpLabelSize.Location = new System.Drawing.Point(12, 225);
             this.grpLabelSize.Name = "grpLabelSize";
-            this.grpLabelSize.Size = new System.Drawing.Size(330, 70);
+            this.grpLabelSize.Size = new System.Drawing.Size(330, 105);
             this.grpLabelSize.TabIndex = 5;
             this.grpLabelSize.TabStop = false;
             this.grpLabelSize.Text = "라벨 크기";
             //
+            // lblPreset
+            //
+            this.lblPreset.AutoSize = true;
+            this.lblPreset.Location = new System.Drawing.Point(15, 28);
+            this.lblPreset.Text = "프리셋:";
+            //
+            // cmbSizePreset
+            //
+            this.cmbSizePreset.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbSizePreset.Items.AddRange(new object[] {
+                "사용자 정의",
+                "라벨 100×50mm",
+                "라벨 60×40mm",
+                "라벨 40×20mm",
+                "A4 210×297mm (페이지 모드)",
+                "A5 148×210mm",
+                "Letter 215.9×279.4mm",
+                "4×6 inch (101.6×152.4mm)"
+            });
+            this.cmbSizePreset.Location = new System.Drawing.Point(70, 25);
+            this.cmbSizePreset.Size = new System.Drawing.Size(245, 23);
+            this.cmbSizePreset.SelectedIndexChanged += new System.EventHandler(this.cmbSizePreset_SelectedIndexChanged);
+            //
             // lblLabelWidth
             //
             this.lblLabelWidth.AutoSize = true;
-            this.lblLabelWidth.Location = new System.Drawing.Point(15, 32);
+            this.lblLabelWidth.Location = new System.Drawing.Point(15, 67);
             this.lblLabelWidth.Name = "lblLabelWidth";
             this.lblLabelWidth.Size = new System.Drawing.Size(28, 15);
             this.lblLabelWidth.TabIndex = 0;
@@ -227,7 +254,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.numLabelWidth.Increment = new decimal(new int[] { 1, 0, 0, 0 });
             this.numLabelWidth.Maximum = new decimal(new int[] { 9999, 0, 0, 0 });
             this.numLabelWidth.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            this.numLabelWidth.Location = new System.Drawing.Point(50, 30);
+            this.numLabelWidth.Location = new System.Drawing.Point(50, 65);
             this.numLabelWidth.Name = "numLabelWidth";
             this.numLabelWidth.Size = new System.Drawing.Size(75, 23);
             this.numLabelWidth.TabIndex = 1;
@@ -237,7 +264,7 @@ namespace ZebraLabelPrinter.UI.Forms
             // lblLabelTimes
             //
             this.lblLabelTimes.AutoSize = true;
-            this.lblLabelTimes.Location = new System.Drawing.Point(130, 32);
+            this.lblLabelTimes.Location = new System.Drawing.Point(130, 67);
             this.lblLabelTimes.Name = "lblLabelTimes";
             this.lblLabelTimes.Size = new System.Drawing.Size(12, 15);
             this.lblLabelTimes.TabIndex = 2;
@@ -246,7 +273,7 @@ namespace ZebraLabelPrinter.UI.Forms
             // lblLabelHeight
             //
             this.lblLabelHeight.AutoSize = true;
-            this.lblLabelHeight.Location = new System.Drawing.Point(150, 32);
+            this.lblLabelHeight.Location = new System.Drawing.Point(150, 67);
             this.lblLabelHeight.Name = "lblLabelHeight";
             this.lblLabelHeight.Size = new System.Drawing.Size(40, 15);
             this.lblLabelHeight.TabIndex = 3;
@@ -258,7 +285,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.numLabelHeight.Increment = new decimal(new int[] { 1, 0, 0, 0 });
             this.numLabelHeight.Maximum = new decimal(new int[] { 9999, 0, 0, 0 });
             this.numLabelHeight.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            this.numLabelHeight.Location = new System.Drawing.Point(195, 30);
+            this.numLabelHeight.Location = new System.Drawing.Point(195, 65);
             this.numLabelHeight.Name = "numLabelHeight";
             this.numLabelHeight.Size = new System.Drawing.Size(75, 23);
             this.numLabelHeight.TabIndex = 4;
@@ -269,7 +296,7 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.cmbLabelUnit.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbLabelUnit.Items.AddRange(new object[] { "mm", "cm" });
-            this.cmbLabelUnit.Location = new System.Drawing.Point(275, 30);
+            this.cmbLabelUnit.Location = new System.Drawing.Point(275, 65);
             this.cmbLabelUnit.Name = "cmbLabelUnit";
             this.cmbLabelUnit.Size = new System.Drawing.Size(50, 23);
             this.cmbLabelUnit.TabIndex = 5;
@@ -632,6 +659,8 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.Label lblCopies;
         private System.Windows.Forms.NumericUpDown numCopies;
         private System.Windows.Forms.GroupBox grpLabelSize;
+        private System.Windows.Forms.Label lblPreset;
+        private System.Windows.Forms.ComboBox cmbSizePreset;
         private System.Windows.Forms.Label lblLabelWidth;
         private System.Windows.Forms.NumericUpDown numLabelWidth;
         private System.Windows.Forms.Label lblLabelTimes;

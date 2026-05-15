@@ -91,6 +91,7 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 cmbLabelUnit.SelectedItem = "mm";
                 if (cmbLabelUnit.SelectedIndex < 0) cmbLabelUnit.SelectedIndex = 0;
+                cmbSizePreset.SelectedIndex = 0; // 사용자 정의
                 var widthMm = ClampNum(numLabelWidth, Math.Round((decimal)DotsToUnit(_template.WidthDots)));
                 var heightMm = ClampNum(numLabelHeight, Math.Round((decimal)DotsToUnit(_template.HeightDots)));
                 numLabelWidth.Value = widthMm;
@@ -175,6 +176,39 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 SetStatus("라벨 크기 변경 실패: " + ex.Message);
             }
+        }
+
+        private void cmbSizePreset_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // (폭mm, 높이mm) — index 0(사용자정의)는 변경 없음
+            (double w, double h)? size = null;
+            switch (cmbSizePreset.SelectedIndex)
+            {
+                case 1: size = (100, 50); break;
+                case 2: size = (60, 40); break;
+                case 3: size = (40, 20); break;
+                case 4: size = (210, 297); break;   // A4
+                case 5: size = (148, 210); break;   // A5
+                case 6: size = (215.9, 279.4); break; // Letter
+                case 7: size = (101.6, 152.4); break; // 4×6 inch
+            }
+            if (!size.HasValue) return;
+
+            _suppressLabelSizeHandler = true;
+            try
+            {
+                cmbLabelUnit.SelectedItem = "mm";
+                numLabelWidth.Value = ClampNum(numLabelWidth, (decimal)size.Value.w);
+                numLabelHeight.Value = ClampNum(numLabelHeight, (decimal)size.Value.h);
+                _template.WidthDots = UnitToDots(numLabelWidth.Value);
+                _template.HeightDots = UnitToDots(numLabelHeight.Value);
+                ResizeCanvasToLabel();
+                pnlCanvas.Invalidate();
+            }
+            finally { _suppressLabelSizeHandler = false; }
+            RegenerateZplFromTemplate();
+            MarkDirty();
+            SetStatus("라벨 크기 프리셋: " + (cmbSizePreset.SelectedItem as string));
         }
 
         private void OnLabelUnitChanged(object sender, EventArgs e)
