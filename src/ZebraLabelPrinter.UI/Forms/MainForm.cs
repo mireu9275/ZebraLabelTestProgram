@@ -39,24 +39,12 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void EnsureKoreanFont()
         {
-            var candidates = new[]
+            // 시스템 패밀리명 기준으로 FontManager에 등록 — SkiaSharp이 OS에서 찾아 한글 glyph fallback
+            var candidates = new[] { "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR", "Gulim", "맑은 고딕" };
+            foreach (var family in candidates)
             {
-                @"C:\Windows\Fonts\malgun.ttf",
-                @"C:\Windows\Fonts\NanumGothic.ttf",
-                @"C:\Windows\Fonts\gulim.ttc"
-            };
-
-            foreach (var path in candidates)
-            {
-                if (!System.IO.File.Exists(path)) continue;
-                var fileName = System.IO.Path.GetFileName(path).ToUpperInvariant();
-                if (_previewService.TryRegisterFontFromFile('E', fileName, path))
-                {
-                    _template.FontReference = "E:" + fileName;
-                    return;
-                }
+                _previewService.TryRegisterCjkFontByFamilyName(family);
             }
-            // 한글 폰트를 못 찾으면 FontReference는 null로 두고 기본 ^A0 사용 (한글이 박스로 나옴)
         }
 
         private void LoadInstalledPrinters()

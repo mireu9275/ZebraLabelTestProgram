@@ -16,8 +16,6 @@ namespace ZebraLabelPrinter.Core.Models
 
         public bool UseUtf8 { get; set; } = true;
 
-        public string FontReference { get; set; }
-
         public List<LabelField> Fields { get; set; } = new List<LabelField>();
     }
 }

@@ -32,7 +32,7 @@ namespace ZebraLabelPrinter.Core.Builders
 
             foreach (var field in _template.Fields)
             {
-                AppendField(sb, field, data, scale, _template.FontReference);
+                AppendField(sb, field, data, scale);
             }
 
             if (_template.Copies > 1)
@@ -50,7 +50,7 @@ namespace ZebraLabelPrinter.Core.Builders
             return zpl.Replace("^", "\r\n^").TrimStart('\r', '\n');
         }
 
-        private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale, string fontReference)
+        private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale)
         {
             var value = field.Resolve(data);
             var x = Scale(field.X, scale);
@@ -62,19 +62,9 @@ namespace ZebraLabelPrinter.Core.Builders
             switch (field.FieldType)
             {
                 case LabelFieldType.Text:
-                    if (!string.IsNullOrEmpty(fontReference))
-                    {
-                        sb.Append("^A@").Append(rot).Append(',')
-                          .Append(Scale(field.FontHeight, scale)).Append(',')
-                          .Append(Scale(field.FontWidth, scale)).Append(',')
-                          .Append(fontReference);
-                    }
-                    else
-                    {
-                        sb.Append("^A0").Append(rot).Append(',')
-                          .Append(Scale(field.FontHeight, scale)).Append(',')
-                          .Append(Scale(field.FontWidth, scale));
-                    }
+                    sb.Append("^A0").Append(rot).Append(',')
+                      .Append(Scale(field.FontHeight, scale)).Append(',')
+                      .Append(Scale(field.FontWidth, scale));
                     sb.Append("^FH^FD").Append(EncodeText(value)).Append("^FS");
                     break;
 

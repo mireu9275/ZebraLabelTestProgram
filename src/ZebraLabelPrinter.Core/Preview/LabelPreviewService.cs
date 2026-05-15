@@ -1,31 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using BinaryKits.Zpl.Viewer;
+using BinaryKits.Zpl.Viewer.ElementDrawers;
 
 namespace ZebraLabelPrinter.Core.Preview
 {
     public class LabelPreviewService
     {
         private readonly IPrinterStorage _storage = new PrinterStorage();
+        private readonly List<string> _preferredFontFamilies = new List<string>();
 
-        public void RegisterFont(char storageDevice, string fileName, byte[] fontBytes)
+        public bool TryRegisterCjkFontByFamilyName(string familyName)
         {
-            if (fontBytes == null || fontBytes.Length == 0) return;
-            _storage.AddFile(storageDevice, fileName, fontBytes);
-        }
-
-        public bool TryRegisterFontFromFile(char storageDevice, string fileName, string localPath)
-        {
-            if (string.IsNullOrEmpty(localPath) || !File.Exists(localPath)) return false;
-            try
+            if (string.IsNullOrEmpty(familyName)) return false;
+            if (!_preferredFontFamilies.Contains(familyName))
             {
-                _storage.AddFile(storageDevice, fileName, File.ReadAllBytes(localPath));
-                return true;
+                _preferredFontFamilies.Insert(0, familyName);
             }
-            catch
-            {
-                return false;
-            }
+            return true;
         }
 
         public byte[] RenderPng(string zpl, int labelWidthDots = 800, int labelHeightDots = 400, int printDensityDpmm = 8)
@@ -39,10 +33,16 @@ namespace ZebraLabelPrinter.Core.Preview
                 throw new InvalidOperationException("ZPL analysis returned no labels");
             }
 
+            var options = new DrawerOptions
+            {
+                OpaqueBackground = true,
+                FontManager = BuildFontManager()
+            };
+
             var widthMm = labelWidthDots / (double)printDensityDpmm;
             var heightMm = labelHeightDots / (double)printDensityDpmm;
 
-            var drawer = new ZplElementDrawer(_storage);
+            var drawer = new ZplElementDrawer(_storage, options);
             return drawer.Draw(info.LabelInfos[0].ZplElements, widthMm, heightMm, printDensityDpmm);
         }
 
@@ -50,6 +50,16 @@ namespace ZebraLabelPrinter.Core.Preview
         {
             var bytes = RenderPng(zpl, labelWidthDots, labelHeightDots, printDensityDpmm);
             File.WriteAllBytes(outputPath, bytes);
+        }
+
+        private FontManager BuildFontManager()
+        {
+            var fm = new FontManager();
+            if (_preferredFontFamilies.Count == 0) return fm;
+
+            fm.FontStack0 = _preferredFontFamilies.Concat(fm.FontStack0 ?? new List<string>()).Distinct().ToList();
+            fm.FontStackA = _preferredFontFamilies.Concat(fm.FontStackA ?? new List<string>()).Distinct().ToList();
+            return fm;
         }
     }
 }
