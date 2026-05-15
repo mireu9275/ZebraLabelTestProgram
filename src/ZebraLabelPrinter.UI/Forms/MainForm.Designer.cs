@@ -54,6 +54,9 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnAddHLine = new System.Windows.Forms.ToolStripButton();
             this.btnAddVLine = new System.Windows.Forms.ToolStripButton();
             this.toolSep1 = new System.Windows.Forms.ToolStripSeparator();
+            this.btnBringToFront = new System.Windows.Forms.ToolStripButton();
+            this.btnSendToBack = new System.Windows.Forms.ToolStripButton();
+            this.toolSep2 = new System.Windows.Forms.ToolStripSeparator();
             this.btnDeleteField = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
@@ -373,7 +376,8 @@ namespace ZebraLabelPrinter.UI.Forms
             this.toolStripDesigner.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.btnAddText, this.btnAddBarcode, this.btnAddQr, this.btnAddBox,
                 this.btnAddHLine, this.btnAddVLine,
-                this.toolSep1, this.btnDeleteField });
+                this.toolSep1, this.btnBringToFront, this.btnSendToBack,
+                this.toolSep2, this.btnDeleteField });
             this.toolStripDesigner.Location = new System.Drawing.Point(3, 3);
             this.toolStripDesigner.Name = "toolStripDesigner";
             this.toolStripDesigner.Size = new System.Drawing.Size(722, 25);
@@ -431,6 +435,29 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.toolSep1.Name = "toolSep1";
             this.toolSep1.Size = new System.Drawing.Size(6, 25);
+            //
+            // btnBringToFront
+            //
+            this.btnBringToFront.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnBringToFront.Name = "btnBringToFront";
+            this.btnBringToFront.Size = new System.Drawing.Size(75, 22);
+            this.btnBringToFront.Text = "맨 위로";
+            this.btnBringToFront.ToolTipText = "선택 필드를 그리는 순서 맨 뒤로 이동 (시각적으로 맨 위)";
+            this.btnBringToFront.Click += new System.EventHandler(this.btnBringToFront_Click);
+            //
+            // btnSendToBack
+            //
+            this.btnSendToBack.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnSendToBack.Name = "btnSendToBack";
+            this.btnSendToBack.Size = new System.Drawing.Size(75, 22);
+            this.btnSendToBack.Text = "맨 뒤로";
+            this.btnSendToBack.ToolTipText = "선택 필드를 그리는 순서 맨 앞으로 이동 (시각적으로 맨 뒤)";
+            this.btnSendToBack.Click += new System.EventHandler(this.btnSendToBack_Click);
+            //
+            // toolSep2
+            //
+            this.toolSep2.Name = "toolSep2";
+            this.toolSep2.Size = new System.Drawing.Size(6, 25);
             //
             // btnDeleteField
             //
@@ -566,6 +593,9 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.ToolStripButton btnAddHLine;
         private System.Windows.Forms.ToolStripButton btnAddVLine;
         private System.Windows.Forms.ToolStripSeparator toolSep1;
+        private System.Windows.Forms.ToolStripButton btnBringToFront;
+        private System.Windows.Forms.ToolStripButton btnSendToBack;
+        private System.Windows.Forms.ToolStripSeparator toolSep2;
         private System.Windows.Forms.ToolStripButton btnDeleteField;
         private System.Windows.Forms.SplitContainer splitDesigner;
         private System.Windows.Forms.Panel pnlCanvas;

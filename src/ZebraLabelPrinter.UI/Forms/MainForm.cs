@@ -27,8 +27,17 @@ namespace ZebraLabelPrinter.UI.Forms
         private LabelField _selectedField;
         private bool _isDragging;
         private Point _dragStartCanvas;
-        private Point _fieldStartLabel;
-        private Point _ghostLabelPos;       // 드래그 중 ghost(빈 테두리)의 라벨 좌표 — 원본 필드는 _fieldStartLabel에 그대로 있음
+        private DragMode _dragMode = DragMode.None;
+        private Rectangle _resizeStartRect; // 리사이즈 시작 시점의 필드 사각형 (X,Y,W,H 모두)
+        private Rectangle _ghostRect;       // 드래그 중 ghost 사각형 (이동: X/Y 변, 리사이즈: 모두 변)
+
+        private enum DragMode
+        {
+            None, Move,
+            ResizeNW, ResizeN, ResizeNE,
+            ResizeW,            ResizeE,
+            ResizeSW, ResizeS, ResizeSE
+        }
         private const int CanvasPadding = 10;
         private double _canvasZoom = 1.0;
         private const double MinZoom = 0.25;
@@ -520,23 +529,31 @@ namespace ZebraLabelPrinter.UI.Forms
                 DrawField(g, field, ReferenceEquals(field, _selectedField), faded: isDraggingThis);
             }
 
-            // 드래그 중이면 ghost(목적지 미리보기) 빈 테두리 그리기 + 좌표 floating 라벨
+            // 선택된 박스에 리사이즈 핸들 표시 (드래그 안 할 때만, 드래그 중이면 ghost 핸들이 대신)
+            if (!_isDragging && _selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
+            {
+                DrawResizeHandles(g, FieldRect(_selectedField));
+            }
+
+            // 드래그 중이면 ghost(목적지/새 크기 미리보기) + 좌표 floating 라벨
             if (_isDragging && _selectedField != null)
             {
-                // 원본 필드 크기에 맞춰 ghost 위치만 _ghostLabelPos로
+                var ghost = _ghostRect;
                 var fr = FieldRect(_selectedField);
-                var ghost = new Rectangle(_ghostLabelPos.X, _ghostLabelPos.Y, fr.Width, fr.Height);
 
-                // 원본 → ghost로 연결선 (어디로 가는지 시각화)
-                using (var conn = new Pen(Color.FromArgb(120, Color.DodgerBlue), 1f / (float)_canvasZoom))
+                // 이동 모드일 때만 원본 → ghost 연결선
+                if (_dragMode == DragMode.Move)
                 {
-                    conn.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
-                    var srcCenter = new Point(fr.X + fr.Width / 2, fr.Y + fr.Height / 2);
-                    var dstCenter = new Point(ghost.X + ghost.Width / 2, ghost.Y + ghost.Height / 2);
-                    g.DrawLine(conn, srcCenter, dstCenter);
+                    using (var conn = new Pen(Color.FromArgb(120, Color.DodgerBlue), 1f / (float)_canvasZoom))
+                    {
+                        conn.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
+                        var srcCenter = new Point(fr.X + fr.Width / 2, fr.Y + fr.Height / 2);
+                        var dstCenter = new Point(ghost.X + ghost.Width / 2, ghost.Y + ghost.Height / 2);
+                        g.DrawLine(conn, srcCenter, dstCenter);
+                    }
                 }
 
-                // Ghost 자체: 빈 사각형 + 굵은 dashed border
+                // Ghost 사각형
                 var ghostPenWidth = 2.5f / (float)_canvasZoom;
                 using (var ghostFill = new SolidBrush(Color.FromArgb(30, Color.DodgerBlue)))
                     g.FillRectangle(ghostFill, ghost);
@@ -545,12 +562,23 @@ namespace ZebraLabelPrinter.UI.Forms
                     ghostPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                     g.DrawRectangle(ghostPen, ghost);
                 }
+                // 리사이즈 중에는 ghost에 핸들도 같이
+                if (_dragMode != DragMode.Move && _selectedField.FieldType == LabelFieldType.Box)
+                    DrawResizeHandles(g, ghost);
 
-                // Ghost 위에 좌표 floating 라벨
+                // floating 라벨: 이동이면 X/Y, 리사이즈면 W x H도 추가
                 var mmPerDot = MmPerDot();
-                var info = string.Format("X={0} ({1:F1}mm)  Y={2} ({3:F1}mm)",
-                    _ghostLabelPos.X, _ghostLabelPos.X * mmPerDot,
-                    _ghostLabelPos.Y, _ghostLabelPos.Y * mmPerDot);
+                string info;
+                if (_dragMode == DragMode.Move)
+                {
+                    info = string.Format("X={0} ({1:F1}mm)  Y={2} ({3:F1}mm)",
+                        ghost.X, ghost.X * mmPerDot, ghost.Y, ghost.Y * mmPerDot);
+                }
+                else
+                {
+                    info = string.Format("{0} × {1} dots  ({2:F1} × {3:F1}mm)",
+                        ghost.Width, ghost.Height, ghost.Width * mmPerDot, ghost.Height * mmPerDot);
+                }
                 using (var font = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Pixel))
                 using (var back = new SolidBrush(Color.FromArgb(220, Color.Black)))
                 using (var fore = new SolidBrush(Color.White))
@@ -560,6 +588,34 @@ namespace ZebraLabelPrinter.UI.Forms
                     var rectAbove = new RectangleF(ghost.X, Math.Max(0, ghost.Y - size.Height - pad * 2), size.Width + pad * 2, size.Height + pad);
                     g.FillRectangle(back, rectAbove);
                     g.DrawString(info, font, fore, rectAbove.X + pad, rectAbove.Y + pad / 2);
+                }
+            }
+        }
+
+        private void DrawResizeHandles(Graphics g, Rectangle r)
+        {
+            // 핸들 크기 ~ 화면 8px (라벨 dots 기준 8/zoom)
+            var handleSize = Math.Max(4, 8f / (float)_canvasZoom);
+            var half = handleSize / 2f;
+            var points = new[]
+            {
+                new PointF(r.X, r.Y),                                  // NW
+                new PointF(r.X + r.Width / 2f, r.Y),                   // N
+                new PointF(r.Right, r.Y),                              // NE
+                new PointF(r.X, r.Y + r.Height / 2f),                  // W
+                new PointF(r.Right, r.Y + r.Height / 2f),              // E
+                new PointF(r.X, r.Bottom),                             // SW
+                new PointF(r.X + r.Width / 2f, r.Bottom),              // S
+                new PointF(r.Right, r.Bottom)                          // SE
+            };
+            using (var fill = new SolidBrush(Color.White))
+            using (var border = new Pen(Color.DodgerBlue, 1f / (float)_canvasZoom))
+            {
+                foreach (var p in points)
+                {
+                    var rect = new RectangleF(p.X - half, p.Y - half, handleSize, handleSize);
+                    g.FillRectangle(fill, rect);
+                    g.DrawRectangle(border, rect.X, rect.Y, rect.Width, rect.Height);
                 }
             }
         }
@@ -607,14 +663,32 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             pnlCanvas.Focus();
             if (e.Button != MouseButtons.Left) return;
+
+            // 1) 선택된 박스의 리사이즈 핸들 hit test 먼저
+            if (_selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
+            {
+                var handleMode = HitTestHandle(e.Location, _selectedField);
+                if (handleMode != DragMode.None)
+                {
+                    _dragMode = handleMode;
+                    _isDragging = true;
+                    _dragStartCanvas = e.Location;
+                    _resizeStartRect = FieldRect(_selectedField);
+                    _ghostRect = _resizeStartRect;
+                    return;
+                }
+            }
+
+            // 2) 일반 필드 hit (이동)
             var hit = HitTest(e.Location);
             SelectField(hit);
             if (hit != null)
             {
+                _dragMode = DragMode.Move;
                 _isDragging = true;
                 _dragStartCanvas = e.Location;
-                _fieldStartLabel = new Point(hit.X, hit.Y);
-                _ghostLabelPos = _fieldStartLabel; // 처음엔 원본 위치에 ghost
+                _resizeStartRect = FieldRect(hit);
+                _ghostRect = _resizeStartRect;
             }
         }
 
@@ -627,16 +701,19 @@ namespace ZebraLabelPrinter.UI.Forms
             SetStatus(string.Format("커서: X={0}dot ({1:F1}mm), Y={2}dot ({3:F1}mm)", labelPt.X, mmX, labelPt.Y, mmY)
                      + (_selectedField != null ? "  |  선택: " + _selectedField.Name : ""));
 
-            if (!_isDragging || _selectedField == null) return;
+            if (!_isDragging)
+            {
+                // 드래그 안 할 때는 hover에 따라 커서 변경
+                pnlCanvas.Cursor = GetHoverCursor(e.Location);
+                return;
+            }
 
-            // 화면 픽셀 이동량을 라벨 dots로 환산, ghost 위치 갱신 — 원본 필드 X/Y는 안 건드림
+            // 화면 픽셀 이동량을 라벨 dots로 환산
             var dxDots = (int)Math.Round((e.X - _dragStartCanvas.X) / _canvasZoom);
             var dyDots = (int)Math.Round((e.Y - _dragStartCanvas.Y) / _canvasZoom);
-            var newX = Math.Max(0, _fieldStartLabel.X + dxDots);
-            var newY = Math.Max(0, _fieldStartLabel.Y + dyDots);
-            // Shift 누르면 스냅 해제, 기본은 스냅 ON
             var snap = (Control.ModifierKeys & Keys.Shift) != Keys.Shift;
-            _ghostLabelPos = new Point(SnapToGrid(newX, snap), SnapToGrid(newY, snap));
+
+            _ghostRect = ComputeGhostRect(_dragMode, _resizeStartRect, dxDots, dyDots, snap);
             pnlCanvas.Invalidate();
         }
 
@@ -644,10 +721,26 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             if (!_isDragging) return;
             _isDragging = false;
-            if (_selectedField != null && (_ghostLabelPos.X != _selectedField.X || _ghostLabelPos.Y != _selectedField.Y))
+            var mode = _dragMode;
+            _dragMode = DragMode.None;
+
+            if (_selectedField == null)
             {
-                _selectedField.X = _ghostLabelPos.X;
-                _selectedField.Y = _ghostLabelPos.Y;
+                pnlCanvas.Invalidate();
+                return;
+            }
+
+            var changed = false;
+            if (_ghostRect.X != _selectedField.X) { _selectedField.X = _ghostRect.X; changed = true; }
+            if (_ghostRect.Y != _selectedField.Y) { _selectedField.Y = _ghostRect.Y; changed = true; }
+            if (mode != DragMode.Move && _selectedField.FieldType == LabelFieldType.Box)
+            {
+                if (_ghostRect.Width != _selectedField.Width) { _selectedField.Width = _ghostRect.Width; changed = true; }
+                if (_ghostRect.Height != _selectedField.Height) { _selectedField.Height = _ghostRect.Height; changed = true; }
+            }
+
+            if (changed)
+            {
                 pgFieldProps.Refresh();
                 RegenerateZplFromTemplate();
             }
@@ -655,6 +748,143 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 pnlCanvas.Invalidate();
             }
+        }
+
+        private const int MinFieldSize = 5;
+
+        private Rectangle ComputeGhostRect(DragMode mode, Rectangle start, int dx, int dy, bool snap)
+        {
+            int x = start.X, y = start.Y, w = start.Width, h = start.Height;
+            switch (mode)
+            {
+                case DragMode.Move:
+                    x = Math.Max(0, start.X + dx);
+                    y = Math.Max(0, start.Y + dy);
+                    x = SnapToGrid(x, snap);
+                    y = SnapToGrid(y, snap);
+                    break;
+                case DragMode.ResizeE:
+                    w = Math.Max(MinFieldSize, start.Width + dx);
+                    w = SnapToGrid(w, snap);
+                    break;
+                case DragMode.ResizeS:
+                    h = Math.Max(MinFieldSize, start.Height + dy);
+                    h = SnapToGrid(h, snap);
+                    break;
+                case DragMode.ResizeSE:
+                    w = Math.Max(MinFieldSize, start.Width + dx);
+                    h = Math.Max(MinFieldSize, start.Height + dy);
+                    w = SnapToGrid(w, snap); h = SnapToGrid(h, snap);
+                    break;
+                case DragMode.ResizeW:
+                    {
+                        var newX = Math.Min(start.Right - MinFieldSize, Math.Max(0, start.X + dx));
+                        newX = SnapToGrid(newX, snap);
+                        w = start.Right - newX;
+                        x = newX;
+                    }
+                    break;
+                case DragMode.ResizeN:
+                    {
+                        var newY = Math.Min(start.Bottom - MinFieldSize, Math.Max(0, start.Y + dy));
+                        newY = SnapToGrid(newY, snap);
+                        h = start.Bottom - newY;
+                        y = newY;
+                    }
+                    break;
+                case DragMode.ResizeNW:
+                    {
+                        var newX = Math.Min(start.Right - MinFieldSize, Math.Max(0, start.X + dx));
+                        var newY = Math.Min(start.Bottom - MinFieldSize, Math.Max(0, start.Y + dy));
+                        newX = SnapToGrid(newX, snap); newY = SnapToGrid(newY, snap);
+                        w = start.Right - newX; h = start.Bottom - newY;
+                        x = newX; y = newY;
+                    }
+                    break;
+                case DragMode.ResizeNE:
+                    {
+                        var newY = Math.Min(start.Bottom - MinFieldSize, Math.Max(0, start.Y + dy));
+                        newY = SnapToGrid(newY, snap);
+                        h = start.Bottom - newY;
+                        y = newY;
+                        w = Math.Max(MinFieldSize, start.Width + dx);
+                        w = SnapToGrid(w, snap);
+                    }
+                    break;
+                case DragMode.ResizeSW:
+                    {
+                        var newX = Math.Min(start.Right - MinFieldSize, Math.Max(0, start.X + dx));
+                        newX = SnapToGrid(newX, snap);
+                        w = start.Right - newX;
+                        x = newX;
+                        h = Math.Max(MinFieldSize, start.Height + dy);
+                        h = SnapToGrid(h, snap);
+                    }
+                    break;
+            }
+            return new Rectangle(x, y, w, h);
+        }
+
+        private DragMode HitTestHandle(Point canvasPt, LabelField field)
+        {
+            var r = FieldRect(field);
+            var labelPt = CanvasToLabel(canvasPt);
+            var radius = Math.Max(3, (int)Math.Round(5 / _canvasZoom));
+
+            bool Near(int x, int y) =>
+                Math.Abs(labelPt.X - x) <= radius && Math.Abs(labelPt.Y - y) <= radius;
+
+            // 모서리 4개 우선
+            if (Near(r.X, r.Y)) return DragMode.ResizeNW;
+            if (Near(r.Right, r.Y)) return DragMode.ResizeNE;
+            if (Near(r.X, r.Bottom)) return DragMode.ResizeSW;
+            if (Near(r.Right, r.Bottom)) return DragMode.ResizeSE;
+            // 변 중점 4개
+            if (Near(r.X + r.Width / 2, r.Y)) return DragMode.ResizeN;
+            if (Near(r.X + r.Width / 2, r.Bottom)) return DragMode.ResizeS;
+            if (Near(r.X, r.Y + r.Height / 2)) return DragMode.ResizeW;
+            if (Near(r.Right, r.Y + r.Height / 2)) return DragMode.ResizeE;
+            return DragMode.None;
+        }
+
+        private Cursor GetHoverCursor(Point canvasPt)
+        {
+            if (_selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
+            {
+                switch (HitTestHandle(canvasPt, _selectedField))
+                {
+                    case DragMode.ResizeNW:
+                    case DragMode.ResizeSE: return Cursors.SizeNWSE;
+                    case DragMode.ResizeNE:
+                    case DragMode.ResizeSW: return Cursors.SizeNESW;
+                    case DragMode.ResizeN:
+                    case DragMode.ResizeS: return Cursors.SizeNS;
+                    case DragMode.ResizeE:
+                    case DragMode.ResizeW: return Cursors.SizeWE;
+                }
+            }
+            var hit = HitTest(canvasPt);
+            return hit != null ? Cursors.SizeAll : Cursors.Default;
+        }
+
+        private void btnBringToFront_Click(object sender, EventArgs e)
+        {
+            if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
+            _template.Fields.Remove(_selectedField);
+            _template.Fields.Add(_selectedField);
+            pnlCanvas.Invalidate();
+            RegenerateZplFromTemplate();
+            SetStatus("맨 위로 이동: " + _selectedField.Name);
+        }
+
+        private void btnSendToBack_Click(object sender, EventArgs e)
+        {
+            if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
+            _template.Fields.Remove(_selectedField);
+            _template.Fields.Insert(0, _selectedField);
+            pnlCanvas.Invalidate();
+            RegenerateZplFromTemplate();
+            SetStatus("맨 뒤로 이동: " + _selectedField.Name);
         }
 
         private void pnlCanvas_MouseWheel(object sender, MouseEventArgs e)
