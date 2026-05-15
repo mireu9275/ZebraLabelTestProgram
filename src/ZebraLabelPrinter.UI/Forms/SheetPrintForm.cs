@@ -59,7 +59,8 @@ namespace ZebraLabelPrinter.UI.Forms
                 MarginRightMm = (double)numMarginR.Value,
                 MarginBottomMm = (double)numMarginB.Value,
                 GapXMm = (double)numGapX.Value,
-                GapYMm = (double)numGapY.Value
+                GapYMm = (double)numGapY.Value,
+                DrawCutLines = chkCutLines.Checked
             };
             layout.ApplyPageType();
             return layout;
@@ -196,6 +197,33 @@ namespace ZebraLabelPrinter.UI.Forms
                     using (var slotBorder = new Pen(Color.FromArgb(80, Color.Black), 0.5f))
                         g.DrawRectangle(slotBorder, slot.X, slot.Y, slot.Width, slot.Height);
                     idx++;
+                }
+            }
+
+            // 구분선 (자르기 안내) — 캔버스 픽셀 좌표로 변환해서 그림
+            if (layout.DrawCutLines && (rows > 1 || cols > 1))
+            {
+                using (var pen = new Pen(Color.FromArgb(150, Color.Gray), 1f))
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    // 가로 구분선
+                    for (int r = 1; r < rows; r++)
+                    {
+                        var yMm = layout.MarginTopMm + r * LabelHeightMm + (r - 0.5) * layout.GapYMm;
+                        var yPx = offsetY + (float)(yMm * pxPerMm);
+                        g.DrawLine(pen,
+                            offsetX + (float)(layout.MarginLeftMm * pxPerMm), yPx,
+                            offsetX + (float)((layout.PageWidthMm - layout.MarginRightMm) * pxPerMm), yPx);
+                    }
+                    // 세로 구분선
+                    for (int c = 1; c < cols; c++)
+                    {
+                        var xMm = layout.MarginLeftMm + c * LabelWidthMm + (c - 0.5) * layout.GapXMm;
+                        var xPx = offsetX + (float)(xMm * pxPerMm);
+                        g.DrawLine(pen,
+                            xPx, offsetY + (float)(layout.MarginTopMm * pxPerMm),
+                            xPx, offsetY + (float)((layout.PageHeightMm - layout.MarginBottomMm) * pxPerMm));
+                    }
                 }
             }
 

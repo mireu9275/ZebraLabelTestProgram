@@ -26,6 +26,9 @@ namespace ZebraLabelPrinter.Core.Models
         public double GapXMm { get; set; } = 2;
         public double GapYMm { get; set; } = 2;
 
+        // 자르기용 구분선 (gap 중간에 점선)
+        public bool DrawCutLines { get; set; } = true;
+
         public void ApplyPageType()
         {
             switch (PageType)

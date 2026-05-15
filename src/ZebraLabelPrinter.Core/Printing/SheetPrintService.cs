@@ -89,6 +89,13 @@ namespace ZebraLabelPrinter.Core.Printing
                         labelIndex++;
                     }
                 }
+
+                // 구분선 (가위 자르기 안내) — 라벨이 2개 이상일 때만
+                if (req.Sheet.DrawCutLines && (rows > 1 || cols > 1))
+                {
+                    DrawCutLines(e.Graphics, req.Sheet, rows, cols, labelWidthMm, labelHeightMm);
+                }
+
                 e.HasMorePages = labelIndex < labelImages.Count;
             };
             doc.EndPrint += (s, e) =>
@@ -106,6 +113,34 @@ namespace ZebraLabelPrinter.Core.Printing
             using (var doc = BuildPrintDocument(req))
             {
                 doc.Print();
+            }
+        }
+
+        // gap 중간에 점선 그리기 — Graphics PageUnit=Millimeter 기준
+        public static void DrawCutLines(Graphics g, SheetLayout sheet, int rows, int cols,
+            double labelWidthMm, double labelHeightMm)
+        {
+            using (var pen = new Pen(Color.Gray, 0.15f))
+            {
+                pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+
+                // 가로 구분선 (행 사이) — gap의 중간 y
+                for (int r = 1; r < rows; r++)
+                {
+                    var y = (float)(sheet.MarginTopMm + r * labelHeightMm + (r - 0.5) * sheet.GapYMm);
+                    g.DrawLine(pen,
+                        (float)sheet.MarginLeftMm, y,
+                        (float)(sheet.PageWidthMm - sheet.MarginRightMm), y);
+                }
+
+                // 세로 구분선 (열 사이) — gap의 중간 x
+                for (int c = 1; c < cols; c++)
+                {
+                    var x = (float)(sheet.MarginLeftMm + c * labelWidthMm + (c - 0.5) * sheet.GapXMm);
+                    g.DrawLine(pen,
+                        x, (float)sheet.MarginTopMm,
+                        x, (float)(sheet.PageHeightMm - sheet.MarginBottomMm));
+                }
             }
         }
     }

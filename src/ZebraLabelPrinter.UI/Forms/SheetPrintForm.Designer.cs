@@ -38,6 +38,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.numGapY = new System.Windows.Forms.NumericUpDown();
             this.lblCount = new System.Windows.Forms.Label();
             this.numCount = new System.Windows.Forms.NumericUpDown();
+            this.chkCutLines = new System.Windows.Forms.CheckBox();
             this.lblGridInfo = new System.Windows.Forms.Label();
             this.btnPrint = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -70,6 +71,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.pnlSettings.Controls.Add(this.grpGap);
             this.pnlSettings.Controls.Add(this.lblCount);
             this.pnlSettings.Controls.Add(this.numCount);
+            this.pnlSettings.Controls.Add(this.chkCutLines);
             this.pnlSettings.Controls.Add(this.lblGridInfo);
             this.pnlSettings.Controls.Add(this.btnPrint);
             this.pnlSettings.Controls.Add(this.btnCancel);
@@ -146,9 +148,16 @@ namespace ZebraLabelPrinter.UI.Forms
             this.numCount.Value = 1;
             this.numCount.ValueChanged += new System.EventHandler(this.OnSettingsChanged);
 
+            // chkCutLines
+            this.chkCutLines.AutoSize = true;
+            this.chkCutLines.Checked = true;
+            this.chkCutLines.Location = new System.Drawing.Point(15, 363);
+            this.chkCutLines.Text = "구분선 인쇄 (자르기 안내선)";
+            this.chkCutLines.CheckedChanged += new System.EventHandler(this.OnSettingsChanged);
+
             // lblGridInfo
-            this.lblGridInfo.Location = new System.Drawing.Point(15, 370);
-            this.lblGridInfo.Size = new System.Drawing.Size(285, 70);
+            this.lblGridInfo.Location = new System.Drawing.Point(15, 395);
+            this.lblGridInfo.Size = new System.Drawing.Size(285, 60);
             this.lblGridInfo.ForeColor = System.Drawing.Color.DarkBlue;
 
             // 버튼
@@ -209,6 +218,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.NumericUpDown numGapY;
         private System.Windows.Forms.Label lblCount;
         private System.Windows.Forms.NumericUpDown numCount;
+        private System.Windows.Forms.CheckBox chkCutLines;
         private System.Windows.Forms.Label lblGridInfo;
         private System.Windows.Forms.Button btnPrint;
         private System.Windows.Forms.Button btnCancel;
