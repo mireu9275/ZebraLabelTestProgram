@@ -22,6 +22,8 @@ namespace ZebraLabelPrinter.UI.Forms
         private readonly KoreanFontProfile _profile = KoreanFontProfile.Kfont3();
         private bool _suppressDataBindingHandler;
         private readonly Dictionary<string, TextBox> _dataBindingControls = new Dictionary<string, TextBox>();
+        private bool _isDirty;
+        private string _currentFilePath;
 
         // Designer state
         private LabelField _selectedField;
@@ -54,6 +56,7 @@ namespace ZebraLabelPrinter.UI.Forms
             InitializeDesigner();
             RebuildDataBindings();
             RegenerateZplFromTemplate();
+            UpdateTitle(); // 시작 시 "(이름 없음)"으로 타이틀 설정
         }
 
         private void InitializeDesigner()
@@ -125,6 +128,7 @@ namespace ZebraLabelPrinter.UI.Forms
             ResizeCanvasToLabel();
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
+            MarkDirty();
         }
 
         private void OnLabelUnitChanged(object sender, EventArgs e)
@@ -425,6 +429,62 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             SetStatus(title + ": " + ex.Message);
             MessageBox.Show(this, ex.ToString(), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        // ========== Dirty 추적 & 종료 확인 ==========
+
+        private void MarkDirty()
+        {
+            if (_isDirty) return;
+            _isDirty = true;
+            UpdateTitle();
+        }
+
+        private void ClearDirty()
+        {
+            if (!_isDirty) return;
+            _isDirty = false;
+            UpdateTitle();
+        }
+
+        private void UpdateTitle()
+        {
+            var fileName = string.IsNullOrEmpty(_currentFilePath)
+                ? "(이름 없음)"
+                : Path.GetFileName(_currentFilePath);
+            this.Text = "Zebra Label Printer — " + fileName + (_isDirty ? " *" : "");
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // 사용자가 직접 닫은 경우(X, Alt+F4, 시스템 메뉴 더블클릭)만 확인.
+            // 시스템 종료/태스크매니저 강제 종료 등은 그대로 진행.
+            if (e.CloseReason == CloseReason.UserClosing && _isDirty)
+            {
+                var result = MessageBox.Show(this,
+                    "저장하지 않은 변경사항이 있습니다.\n저장하고 종료하시겠습니까?\n\n" +
+                    "예 = 저장 후 종료\n아니오 = 저장 없이 종료\n취소 = 종료 안 함",
+                    "종료 확인",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button3);
+
+                if (result == DialogResult.Cancel)
+                {
+                    e.Cancel = true;
+                }
+                else if (result == DialogResult.Yes)
+                {
+                    btnSaveTemplate_Click(this, EventArgs.Empty);
+                    // 저장 다이얼로그에서 사용자가 취소하면 _isDirty 그대로 → 종료 중단
+                    if (_isDirty)
+                    {
+                        e.Cancel = true;
+                    }
+                }
+                // No: 그대로 종료
+            }
+            base.OnFormClosing(e);
         }
 
         // ========== Designer ==========
@@ -749,6 +809,7 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 pgFieldProps.Refresh();
                 RegenerateZplFromTemplate();
+                MarkDirty();
             }
             else
             {
@@ -893,6 +954,7 @@ namespace ZebraLabelPrinter.UI.Forms
             pgFieldProps.Refresh();
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
+            MarkDirty();
             SetStatus("회전: " + _selectedField.Name + " → " + _selectedField.Rotation);
         }
 
@@ -908,6 +970,7 @@ namespace ZebraLabelPrinter.UI.Forms
             SelectField(null);
             RebuildDataBindings();
             RegenerateZplFromTemplate();
+            MarkDirty();
             SetStatus("전체 삭제 완료");
         }
 
@@ -928,6 +991,8 @@ namespace ZebraLabelPrinter.UI.Forms
                     {
                         serializer.Serialize(w, _template);
                     }
+                    _currentFilePath = dlg.FileName;
+                    ClearDirty();
                     SetStatus("저장 완료: " + dlg.FileName);
                 }
                 catch (Exception ex)
@@ -970,6 +1035,8 @@ namespace ZebraLabelPrinter.UI.Forms
                     RebuildDataBindings();
                     RegenerateZplFromTemplate();
                     pnlCanvas.Invalidate();
+                    _currentFilePath = dlg.FileName;
+                    ClearDirty();
                     SetStatus("불러오기 완료: " + dlg.FileName + " (필드 " + _template.Fields.Count + "개)");
                 }
                 catch (Exception ex)
@@ -986,6 +1053,7 @@ namespace ZebraLabelPrinter.UI.Forms
             _template.Fields.Add(_selectedField);
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
+            MarkDirty();
             SetStatus("맨 위로 이동: " + _selectedField.Name);
         }
 
@@ -996,6 +1064,7 @@ namespace ZebraLabelPrinter.UI.Forms
             _template.Fields.Insert(0, _selectedField);
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
+            MarkDirty();
             SetStatus("맨 뒤로 이동: " + _selectedField.Name);
         }
 
@@ -1041,6 +1110,7 @@ namespace ZebraLabelPrinter.UI.Forms
                 pnlCanvas.Invalidate();
                 pgFieldProps.Refresh();
                 RegenerateZplFromTemplate();
+                MarkDirty();
                 e.Handled = true;
             }
         }
@@ -1080,6 +1150,7 @@ namespace ZebraLabelPrinter.UI.Forms
             SelectField(f);
             RebuildDataBindings();
             RegenerateZplFromTemplate();
+            MarkDirty();
         }
 
         private void AddField(LabelFieldType type)
@@ -1110,6 +1181,7 @@ namespace ZebraLabelPrinter.UI.Forms
             SelectField(f);
             RebuildDataBindings();
             RegenerateZplFromTemplate();
+            MarkDirty();
         }
 
         private void btnDeleteField_Click(object sender, EventArgs e)
@@ -1119,18 +1191,20 @@ namespace ZebraLabelPrinter.UI.Forms
             SelectField(null);
             RebuildDataBindings();
             RegenerateZplFromTemplate();
+            MarkDirty();
         }
 
         private void pgFieldProps_PropertyValueChanged(object s, System.Windows.Forms.PropertyValueChangedEventArgs e)
         {
             pnlCanvas.Invalidate();
-            // DataBindingKey/Name이 바뀐 경우만 입력란 재생성 (X/Y 등은 불필요)
-            var label = e.ChangedItem?.Label;
-            if (label == "DataBindingKey" || label == "Name")
+            // DisplayName 한국어로 바꿨으니 label 비교 대신 PropertyDescriptor의 진짜 Name 사용
+            var propName = e.ChangedItem?.PropertyDescriptor?.Name;
+            if (propName == "DataBindingKey" || propName == "Name")
             {
                 RebuildDataBindings();
             }
             RegenerateZplFromTemplate();
+            MarkDirty();
         }
     }
 }
