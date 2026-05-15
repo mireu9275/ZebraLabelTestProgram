@@ -40,6 +40,17 @@ namespace ZebraLabelPrinter.UI.Forms
             this.picPreview = new System.Windows.Forms.PictureBox();
             this.tabZpl = new System.Windows.Forms.TabPage();
             this.txtZpl = new System.Windows.Forms.TextBox();
+            this.tabDesigner = new System.Windows.Forms.TabPage();
+            this.splitDesigner = new System.Windows.Forms.SplitContainer();
+            this.pnlCanvas = new System.Windows.Forms.Panel();
+            this.pgFieldProps = new System.Windows.Forms.PropertyGrid();
+            this.toolStripDesigner = new System.Windows.Forms.ToolStrip();
+            this.btnAddText = new System.Windows.Forms.ToolStripButton();
+            this.btnAddBarcode = new System.Windows.Forms.ToolStripButton();
+            this.btnAddQr = new System.Windows.Forms.ToolStripButton();
+            this.btnAddBox = new System.Windows.Forms.ToolStripButton();
+            this.toolSep1 = new System.Windows.Forms.ToolStripSeparator();
+            this.btnDeleteField = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
@@ -54,6 +65,12 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabPreview.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
             this.tabZpl.SuspendLayout();
+            this.tabDesigner.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitDesigner)).BeginInit();
+            this.splitDesigner.Panel1.SuspendLayout();
+            this.splitDesigner.Panel2.SuspendLayout();
+            this.splitDesigner.SuspendLayout();
+            this.toolStripDesigner.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             //
@@ -242,6 +259,7 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.tabRight.Controls.Add(this.tabPreview);
             this.tabRight.Controls.Add(this.tabZpl);
+            this.tabRight.Controls.Add(this.tabDesigner);
             this.tabRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabRight.Location = new System.Drawing.Point(0, 0);
             this.tabRight.Name = "tabRight";
@@ -294,6 +312,106 @@ namespace ZebraLabelPrinter.UI.Forms
             this.txtZpl.TabIndex = 0;
             this.txtZpl.WordWrap = false;
             //
+            // tabDesigner
+            //
+            this.tabDesigner.Controls.Add(this.splitDesigner);
+            this.tabDesigner.Controls.Add(this.toolStripDesigner);
+            this.tabDesigner.Location = new System.Drawing.Point(4, 24);
+            this.tabDesigner.Name = "tabDesigner";
+            this.tabDesigner.Padding = new System.Windows.Forms.Padding(3);
+            this.tabDesigner.Size = new System.Drawing.Size(728, 650);
+            this.tabDesigner.TabIndex = 2;
+            this.tabDesigner.Text = "디자이너";
+            this.tabDesigner.UseVisualStyleBackColor = true;
+            //
+            // toolStripDesigner
+            //
+            this.toolStripDesigner.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.btnAddText, this.btnAddBarcode, this.btnAddQr, this.btnAddBox,
+                this.toolSep1, this.btnDeleteField });
+            this.toolStripDesigner.Location = new System.Drawing.Point(3, 3);
+            this.toolStripDesigner.Name = "toolStripDesigner";
+            this.toolStripDesigner.Size = new System.Drawing.Size(722, 25);
+            this.toolStripDesigner.TabIndex = 0;
+            //
+            // btnAddText
+            //
+            this.btnAddText.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddText.Name = "btnAddText";
+            this.btnAddText.Size = new System.Drawing.Size(75, 22);
+            this.btnAddText.Text = "+ 텍스트";
+            this.btnAddText.Click += new System.EventHandler(this.btnAddText_Click);
+            //
+            // btnAddBarcode
+            //
+            this.btnAddBarcode.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddBarcode.Name = "btnAddBarcode";
+            this.btnAddBarcode.Size = new System.Drawing.Size(75, 22);
+            this.btnAddBarcode.Text = "+ 바코드";
+            this.btnAddBarcode.Click += new System.EventHandler(this.btnAddBarcode_Click);
+            //
+            // btnAddQr
+            //
+            this.btnAddQr.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddQr.Name = "btnAddQr";
+            this.btnAddQr.Size = new System.Drawing.Size(45, 22);
+            this.btnAddQr.Text = "+ QR";
+            this.btnAddQr.Click += new System.EventHandler(this.btnAddQr_Click);
+            //
+            // btnAddBox
+            //
+            this.btnAddBox.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddBox.Name = "btnAddBox";
+            this.btnAddBox.Size = new System.Drawing.Size(60, 22);
+            this.btnAddBox.Text = "+ 박스";
+            this.btnAddBox.Click += new System.EventHandler(this.btnAddBox_Click);
+            //
+            // toolSep1
+            //
+            this.toolSep1.Name = "toolSep1";
+            this.toolSep1.Size = new System.Drawing.Size(6, 25);
+            //
+            // btnDeleteField
+            //
+            this.btnDeleteField.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnDeleteField.Name = "btnDeleteField";
+            this.btnDeleteField.Size = new System.Drawing.Size(60, 22);
+            this.btnDeleteField.Text = "삭제";
+            this.btnDeleteField.Click += new System.EventHandler(this.btnDeleteField_Click);
+            //
+            // splitDesigner
+            //
+            this.splitDesigner.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitDesigner.Location = new System.Drawing.Point(3, 28);
+            this.splitDesigner.Name = "splitDesigner";
+            this.splitDesigner.Panel1.AutoScroll = true;
+            this.splitDesigner.Panel1.Controls.Add(this.pnlCanvas);
+            this.splitDesigner.Panel2.Controls.Add(this.pgFieldProps);
+            this.splitDesigner.Size = new System.Drawing.Size(722, 619);
+            this.splitDesigner.SplitterDistance = 460;
+            this.splitDesigner.TabIndex = 1;
+            //
+            // pnlCanvas
+            //
+            this.pnlCanvas.BackColor = System.Drawing.Color.LightGray;
+            this.pnlCanvas.Location = new System.Drawing.Point(0, 0);
+            this.pnlCanvas.Name = "pnlCanvas";
+            this.pnlCanvas.Size = new System.Drawing.Size(840, 440);
+            this.pnlCanvas.TabIndex = 0;
+            this.pnlCanvas.Paint += new System.Windows.Forms.PaintEventHandler(this.pnlCanvas_Paint);
+            this.pnlCanvas.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pnlCanvas_MouseDown);
+            this.pnlCanvas.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pnlCanvas_MouseMove);
+            this.pnlCanvas.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pnlCanvas_MouseUp);
+            //
+            // pgFieldProps
+            //
+            this.pgFieldProps.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pgFieldProps.Location = new System.Drawing.Point(0, 0);
+            this.pgFieldProps.Name = "pgFieldProps";
+            this.pgFieldProps.Size = new System.Drawing.Size(258, 619);
+            this.pgFieldProps.TabIndex = 0;
+            this.pgFieldProps.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.pgFieldProps_PropertyValueChanged);
+            //
             // statusStrip
             //
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.lblStatus });
@@ -333,6 +451,14 @@ namespace ZebraLabelPrinter.UI.Forms
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).EndInit();
             this.tabZpl.ResumeLayout(false);
             this.tabZpl.PerformLayout();
+            this.tabDesigner.ResumeLayout(false);
+            this.tabDesigner.PerformLayout();
+            this.splitDesigner.Panel1.ResumeLayout(false);
+            this.splitDesigner.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitDesigner)).EndInit();
+            this.splitDesigner.ResumeLayout(false);
+            this.toolStripDesigner.ResumeLayout(false);
+            this.toolStripDesigner.PerformLayout();
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
@@ -364,6 +490,17 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.PictureBox picPreview;
         private System.Windows.Forms.TabPage tabZpl;
         private System.Windows.Forms.TextBox txtZpl;
+        private System.Windows.Forms.TabPage tabDesigner;
+        private System.Windows.Forms.ToolStrip toolStripDesigner;
+        private System.Windows.Forms.ToolStripButton btnAddText;
+        private System.Windows.Forms.ToolStripButton btnAddBarcode;
+        private System.Windows.Forms.ToolStripButton btnAddQr;
+        private System.Windows.Forms.ToolStripButton btnAddBox;
+        private System.Windows.Forms.ToolStripSeparator toolSep1;
+        private System.Windows.Forms.ToolStripButton btnDeleteField;
+        private System.Windows.Forms.SplitContainer splitDesigner;
+        private System.Windows.Forms.Panel pnlCanvas;
+        private System.Windows.Forms.PropertyGrid pgFieldProps;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel lblStatus;
     }

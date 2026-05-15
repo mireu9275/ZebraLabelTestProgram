@@ -21,13 +21,30 @@ namespace ZebraLabelPrinter.UI.Forms
         private readonly KoreanFontProfile _profile = KoreanFontProfile.Kfont3();
         private bool _suppressDataBindingHandler;
 
+        // Designer state
+        private LabelField _selectedField;
+        private bool _isDragging;
+        private Point _dragStartCanvas;
+        private Point _fieldStartLabel;
+        private const int CanvasPadding = 10;
+
         public MainForm()
         {
             InitializeComponent();
             _template = SampleTemplates.PartLabel100x50();
             LoadDefaults();
             WireDataBindingEvents();
+            InitializeDesigner();
             RegenerateZplFromTemplate();
+        }
+
+        private void InitializeDesigner()
+        {
+            // 캔버스 크기 = 라벨 dots + padding (1:1 스케일)
+            pnlCanvas.Size = new System.Drawing.Size(
+                _template.WidthDots + CanvasPadding * 2,
+                _template.HeightDots + CanvasPadding * 2);
+            pgFieldProps.SelectedObject = null;
         }
 
         private void LoadDefaults()
@@ -69,6 +86,7 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 var zpl = BuildZpl(_profile);
                 txtZpl.Text = ZplLabelBuilder.Format(zpl);
+                pnlCanvas?.Invalidate();
             }
             catch (Exception ex)
             {
@@ -244,6 +262,167 @@ namespace ZebraLabelPrinter.UI.Forms
         {
             SetStatus(title + ": " + ex.Message);
             MessageBox.Show(this, ex.ToString(), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        // ========== Designer ==========
+
+        private Rectangle FieldRect(LabelField f)
+        {
+            int w, h;
+            switch (f.FieldType)
+            {
+                case LabelFieldType.Text:
+                    w = Math.Max(20, (f.Value?.Length ?? f.Name?.Length ?? 6) * Math.Max(f.FontWidth, 10));
+                    h = Math.Max(f.FontHeight, 20);
+                    break;
+                case LabelFieldType.Barcode128:
+                case LabelFieldType.BarcodeEan13:
+                    w = f.Width > 0 ? f.Width : 200;
+                    h = f.Height > 0 ? f.Height : 80;
+                    break;
+                case LabelFieldType.QrCode:
+                    w = h = Math.Max(f.FontWidth * 21, 80);
+                    break;
+                case LabelFieldType.Box:
+                case LabelFieldType.Line:
+                    w = Math.Max(f.Width, 10);
+                    h = Math.Max(f.Height, 10);
+                    break;
+                default:
+                    w = h = 40; break;
+            }
+            return new Rectangle(f.X + CanvasPadding, f.Y + CanvasPadding, w, h);
+        }
+
+        private void pnlCanvas_Paint(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            var labelRect = new Rectangle(CanvasPadding, CanvasPadding, _template.WidthDots, _template.HeightDots);
+
+            using (var bg = new SolidBrush(Color.White))
+                g.FillRectangle(bg, labelRect);
+            using (var border = new Pen(Color.Black, 1))
+                g.DrawRectangle(border, labelRect);
+
+            if (_template.Fields == null) return;
+            foreach (var field in _template.Fields)
+            {
+                DrawField(g, field, ReferenceEquals(field, _selectedField));
+            }
+        }
+
+        private void DrawField(Graphics g, LabelField field, bool selected)
+        {
+            var r = FieldRect(field);
+            using (var fill = new SolidBrush(Color.FromArgb(40, selected ? Color.DodgerBlue : Color.Gray)))
+                g.FillRectangle(fill, r);
+            using (var pen = new Pen(selected ? Color.DodgerBlue : Color.DimGray, selected ? 2f : 1f))
+            {
+                if (!selected) pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                g.DrawRectangle(pen, r);
+            }
+            var label = "[" + field.FieldType + "] " + (field.Name ?? "");
+            if (!string.IsNullOrEmpty(field.DataBindingKey)) label += " {" + field.DataBindingKey + "}";
+            using (var fontBrush = new SolidBrush(Color.Black))
+            using (var labelFont = new Font("Segoe UI", 8f))
+                g.DrawString(label, labelFont, fontBrush, r.X + 2, r.Y + 2);
+        }
+
+        private LabelField HitTest(Point canvasPoint)
+        {
+            // 위에 그려진 필드(나중에 추가된) 우선
+            for (int i = _template.Fields.Count - 1; i >= 0; i--)
+            {
+                if (FieldRect(_template.Fields[i]).Contains(canvasPoint))
+                    return _template.Fields[i];
+            }
+            return null;
+        }
+
+        private void pnlCanvas_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            var hit = HitTest(e.Location);
+            SelectField(hit);
+            if (hit != null)
+            {
+                _isDragging = true;
+                _dragStartCanvas = e.Location;
+                _fieldStartLabel = new Point(hit.X, hit.Y);
+            }
+        }
+
+        private void pnlCanvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDragging || _selectedField == null) return;
+            var dx = e.X - _dragStartCanvas.X;
+            var dy = e.Y - _dragStartCanvas.Y;
+            _selectedField.X = Math.Max(0, _fieldStartLabel.X + dx);
+            _selectedField.Y = Math.Max(0, _fieldStartLabel.Y + dy);
+            pnlCanvas.Invalidate();
+            pgFieldProps.Refresh();
+        }
+
+        private void pnlCanvas_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (!_isDragging) return;
+            _isDragging = false;
+            RegenerateZplFromTemplate();
+        }
+
+        private void SelectField(LabelField field)
+        {
+            _selectedField = field;
+            pgFieldProps.SelectedObject = field;
+            pnlCanvas.Invalidate();
+            SetStatus(field != null
+                ? "선택: [" + field.FieldType + "] " + (field.Name ?? "")
+                : "선택 해제");
+        }
+
+        private void btnAddText_Click(object sender, EventArgs e) { AddField(LabelFieldType.Text); }
+        private void btnAddBarcode_Click(object sender, EventArgs e) { AddField(LabelFieldType.Barcode128); }
+        private void btnAddQr_Click(object sender, EventArgs e) { AddField(LabelFieldType.QrCode); }
+        private void btnAddBox_Click(object sender, EventArgs e) { AddField(LabelFieldType.Box); }
+
+        private void AddField(LabelFieldType type)
+        {
+            var f = new LabelField
+            {
+                Name = type.ToString() + (_template.Fields.Count + 1),
+                FieldType = type,
+                X = 50,
+                Y = 50
+            };
+            switch (type)
+            {
+                case LabelFieldType.Text:
+                    f.FontWidth = 24; f.FontHeight = 24; f.Value = "Sample"; break;
+                case LabelFieldType.Barcode128:
+                case LabelFieldType.BarcodeEan13:
+                    f.Height = 80; f.Value = "12345"; break;
+                case LabelFieldType.QrCode:
+                    f.FontWidth = 5; f.Value = "QR"; break;
+                case LabelFieldType.Box:
+                    f.Width = 200; f.Height = 100; f.Thickness = 2; break;
+            }
+            _template.Fields.Add(f);
+            SelectField(f);
+            RegenerateZplFromTemplate();
+        }
+
+        private void btnDeleteField_Click(object sender, EventArgs e)
+        {
+            if (_selectedField == null) { SetStatus("삭제할 필드를 먼저 선택하세요"); return; }
+            _template.Fields.Remove(_selectedField);
+            SelectField(null);
+            RegenerateZplFromTemplate();
+        }
+
+        private void pgFieldProps_PropertyValueChanged(object s, System.Windows.Forms.PropertyValueChangedEventArgs e)
+        {
+            pnlCanvas.Invalidate();
+            RegenerateZplFromTemplate();
         }
     }
 }
