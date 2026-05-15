@@ -23,6 +23,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnPreview = new System.Windows.Forms.Button();
             this.btnGenerate = new System.Windows.Forms.Button();
             this.grpData = new System.Windows.Forms.GroupBox();
+            this.pnlDataBindings = new System.Windows.Forms.Panel();
             this.grpLabelSize = new System.Windows.Forms.GroupBox();
             this.numLabelWidth = new System.Windows.Forms.NumericUpDown();
             this.lblLabelWidth = new System.Windows.Forms.Label();
@@ -50,6 +51,8 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnAddBarcode = new System.Windows.Forms.ToolStripButton();
             this.btnAddQr = new System.Windows.Forms.ToolStripButton();
             this.btnAddBox = new System.Windows.Forms.ToolStripButton();
+            this.btnAddHLine = new System.Windows.Forms.ToolStripButton();
+            this.btnAddVLine = new System.Windows.Forms.ToolStripButton();
             this.toolSep1 = new System.Windows.Forms.ToolStripSeparator();
             this.btnDeleteField = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
@@ -137,13 +140,24 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             // grpData (동적 데이터 바인딩 입력 — MainForm.RebuildDataBindings에서 컨트롤 생성)
             //
-            this.grpData.AutoScroll = true;
+            this.grpData.Controls.Add(this.pnlDataBindings);
             this.grpData.Location = new System.Drawing.Point(12, 305);
             this.grpData.Name = "grpData";
             this.grpData.Size = new System.Drawing.Size(330, 245);
             this.grpData.TabIndex = 1;
             this.grpData.TabStop = false;
             this.grpData.Text = "데이터 바인딩";
+            //
+            // pnlDataBindings — 동적 입력 컨테이너 (스크롤 가능)
+            //
+            this.pnlDataBindings.AutoScroll = true;
+            this.pnlDataBindings.Location = new System.Drawing.Point(5, 20);
+            this.pnlDataBindings.Name = "pnlDataBindings";
+            this.pnlDataBindings.Size = new System.Drawing.Size(320, 220);
+            this.pnlDataBindings.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                | System.Windows.Forms.AnchorStyles.Left)
+                | System.Windows.Forms.AnchorStyles.Right)));
+            this.pnlDataBindings.TabIndex = 0;
             //
             // grpPrinter
             //
@@ -358,6 +372,7 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.toolStripDesigner.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.btnAddText, this.btnAddBarcode, this.btnAddQr, this.btnAddBox,
+                this.btnAddHLine, this.btnAddVLine,
                 this.toolSep1, this.btnDeleteField });
             this.toolStripDesigner.Location = new System.Drawing.Point(3, 3);
             this.toolStripDesigner.Name = "toolStripDesigner";
@@ -395,6 +410,22 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnAddBox.Size = new System.Drawing.Size(60, 22);
             this.btnAddBox.Text = "+ 박스";
             this.btnAddBox.Click += new System.EventHandler(this.btnAddBox_Click);
+            //
+            // btnAddHLine
+            //
+            this.btnAddHLine.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddHLine.Name = "btnAddHLine";
+            this.btnAddHLine.Size = new System.Drawing.Size(75, 22);
+            this.btnAddHLine.Text = "+ 가로선";
+            this.btnAddHLine.Click += new System.EventHandler(this.btnAddHLine_Click);
+            //
+            // btnAddVLine
+            //
+            this.btnAddVLine.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnAddVLine.Name = "btnAddVLine";
+            this.btnAddVLine.Size = new System.Drawing.Size(75, 22);
+            this.btnAddVLine.Text = "+ 세로선";
+            this.btnAddVLine.Click += new System.EventHandler(this.btnAddVLine_Click);
             //
             // toolSep1
             //
@@ -517,6 +548,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.NumericUpDown numLabelHeight;
         private System.Windows.Forms.ComboBox cmbLabelUnit;
         private System.Windows.Forms.GroupBox grpData;
+        private System.Windows.Forms.Panel pnlDataBindings;
         private System.Windows.Forms.Button btnGenerate;
         private System.Windows.Forms.Button btnPreview;
         private System.Windows.Forms.Button btnPrint;
@@ -531,6 +563,8 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.ToolStripButton btnAddBarcode;
         private System.Windows.Forms.ToolStripButton btnAddQr;
         private System.Windows.Forms.ToolStripButton btnAddBox;
+        private System.Windows.Forms.ToolStripButton btnAddHLine;
+        private System.Windows.Forms.ToolStripButton btnAddVLine;
         private System.Windows.Forms.ToolStripSeparator toolSep1;
         private System.Windows.Forms.ToolStripButton btnDeleteField;
         private System.Windows.Forms.SplitContainer splitDesigner;

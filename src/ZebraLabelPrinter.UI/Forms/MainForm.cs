@@ -159,35 +159,35 @@ namespace ZebraLabelPrinter.UI.Forms
             _suppressDataBindingHandler = true;
             try
             {
-                grpData.Controls.Clear();
+                pnlDataBindings.Controls.Clear();
                 _dataBindingControls.Clear();
 
                 if (keys.Count == 0)
                 {
                     var empty = new Label
                     {
-                        Text = "디자이너에서 필드를 추가하고 DataBindingKey를 지정하면\n여기에 입력란이 생성됩니다.",
-                        Location = new Point(15, 30),
+                        Text = "디자이너에서 필드를 추가하고 바인딩 키를\n지정하면 여기에 입력란이 생성됩니다.",
+                        Location = new Point(10, 10),
                         AutoSize = true,
                         ForeColor = Color.Gray
                     };
-                    grpData.Controls.Add(empty);
+                    pnlDataBindings.Controls.Add(empty);
                     return;
                 }
 
-                int y = 25;
+                int y = 5;
                 foreach (var key in keys)
                 {
                     var lbl = new Label
                     {
                         Text = key + ":",
-                        Location = new Point(15, y + 4),
+                        Location = new Point(5, y + 4),
                         AutoSize = true
                     };
 
                     var tb = new TextBox
                     {
-                        Location = new Point(130, y),
+                        Location = new Point(120, y),
                         Size = new Size(190, 23),
                         Tag = key
                     };
@@ -204,8 +204,8 @@ namespace ZebraLabelPrinter.UI.Forms
                     }
 
                     tb.TextChanged += OnDataBindingChanged;
-                    grpData.Controls.Add(lbl);
-                    grpData.Controls.Add(tb);
+                    pnlDataBindings.Controls.Add(lbl);
+                    pnlDataBindings.Controls.Add(tb);
                     _dataBindingControls[key] = tb;
                     y += 32;
                 }
@@ -698,6 +698,28 @@ namespace ZebraLabelPrinter.UI.Forms
         private void btnAddBarcode_Click(object sender, EventArgs e) { AddField(LabelFieldType.Barcode128); }
         private void btnAddQr_Click(object sender, EventArgs e) { AddField(LabelFieldType.QrCode); }
         private void btnAddBox_Click(object sender, EventArgs e) { AddField(LabelFieldType.Box); }
+        private void btnAddHLine_Click(object sender, EventArgs e) { AddLine(horizontal: true); }
+        private void btnAddVLine_Click(object sender, EventArgs e) { AddLine(horizontal: false); }
+
+        private void AddLine(bool horizontal)
+        {
+            var name = (horizontal ? "HLine" : "VLine") + (_template.Fields.Count + 1);
+            var f = new LabelField
+            {
+                Name = name,
+                FieldType = LabelFieldType.Box, // ^GB 로 처리하기 위해 Box 타입 사용
+                X = 50,
+                Y = 50,
+                Thickness = 3,
+                Width = horizontal ? 300 : 3,
+                Height = horizontal ? 3 : 200
+                // 선/박스는 데이터 바인딩 없음 (DataBindingKey null)
+            };
+            _template.Fields.Add(f);
+            SelectField(f);
+            RebuildDataBindings();
+            RegenerateZplFromTemplate();
+        }
 
         private void AddField(LabelFieldType type)
         {
