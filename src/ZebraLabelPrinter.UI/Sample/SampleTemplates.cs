@@ -13,7 +13,6 @@ namespace ZebraLabelPrinter.UI.Sample
                 SourceDpi = 203,
                 WidthDots = 800,
                 HeightDots = 400,
-                UseUtf8 = true,
                 Copies = 1
             };
 

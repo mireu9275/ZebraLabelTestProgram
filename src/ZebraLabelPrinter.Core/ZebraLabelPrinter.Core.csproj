@@ -46,6 +46,7 @@
     <Compile Include="Models\LabelTemplate.cs" />
     <Compile Include="Models\LabelField.cs" />
     <Compile Include="Models\PrinterConfig.cs" />
+    <Compile Include="Models\KoreanFontProfile.cs" />
     <Compile Include="Builders\ZplLabelBuilder.cs" />
     <Compile Include="Printing\IPrinterClient.cs" />
     <Compile Include="Printing\TcpPrinterClient.cs" />

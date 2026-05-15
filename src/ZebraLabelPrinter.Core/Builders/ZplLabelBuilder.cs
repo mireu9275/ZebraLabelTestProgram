@@ -15,8 +15,10 @@ namespace ZebraLabelPrinter.Core.Builders
             _template = template ?? throw new ArgumentNullException(nameof(template));
         }
 
-        public string Build(IDictionary<string, string> data, int targetDpi)
+        public string Build(IDictionary<string, string> data, int targetDpi, KoreanFontProfile profile = null)
         {
+            profile = profile ?? KoreanFontProfile.Default();
+
             var scale = targetDpi > 0 && _template.SourceDpi > 0
                 ? (double)targetDpi / _template.SourceDpi
                 : 1.0;
@@ -24,7 +26,10 @@ namespace ZebraLabelPrinter.Core.Builders
             var sb = new StringBuilder();
             sb.Append("^XA");
 
-            if (_template.UseUtf8) sb.Append("^CI28");
+            if (!string.IsNullOrEmpty(profile.HeaderCommands))
+            {
+                sb.Append(profile.HeaderCommands);
+            }
 
             sb.Append("^PW").Append(Scale(_template.WidthDots, scale));
             sb.Append("^LL").Append(Scale(_template.HeightDots, scale));
@@ -32,7 +37,7 @@ namespace ZebraLabelPrinter.Core.Builders
 
             foreach (var field in _template.Fields)
             {
-                AppendField(sb, field, data, scale);
+                AppendField(sb, field, data, scale, profile);
             }
 
             if (_template.Copies > 1)
@@ -50,7 +55,7 @@ namespace ZebraLabelPrinter.Core.Builders
             return zpl.Replace("^", "\r\n^").TrimStart('\r', '\n');
         }
 
-        private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale)
+        private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale, KoreanFontProfile profile)
         {
             var value = field.Resolve(data);
             var x = Scale(field.X, scale);
@@ -62,10 +67,10 @@ namespace ZebraLabelPrinter.Core.Builders
             switch (field.FieldType)
             {
                 case LabelFieldType.Text:
-                    sb.Append("^A0").Append(rot).Append(',')
+                    sb.Append("^A").Append(profile.FontAlias).Append(rot).Append(',')
                       .Append(Scale(field.FontHeight, scale)).Append(',')
                       .Append(Scale(field.FontWidth, scale));
-                    sb.Append("^FH^FD").Append(EncodeText(value)).Append("^FS");
+                    sb.Append("^FH^FD").Append(EncodeText(value, profile.TextEncoding)).Append("^FS");
                     break;
 
                 case LabelFieldType.Barcode128:
@@ -124,9 +129,10 @@ namespace ZebraLabelPrinter.Core.Builders
             return (int)Math.Round(v * scale, MidpointRounding.AwayFromZero);
         }
 
-        private static string EncodeText(string value)
+        private static string EncodeText(string value, Encoding encoding)
         {
             if (string.IsNullOrEmpty(value)) return string.Empty;
+            var enc = encoding ?? Encoding.UTF8;
             var sb = new StringBuilder(value.Length);
             foreach (var ch in value)
             {
@@ -136,7 +142,7 @@ namespace ZebraLabelPrinter.Core.Builders
                 }
                 else if (ch > 0x7F)
                 {
-                    var bytes = Encoding.UTF8.GetBytes(new[] { ch });
+                    var bytes = enc.GetBytes(new[] { ch });
                     foreach (var b in bytes)
                         sb.Append('_').Append(b.ToString("X2", CultureInfo.InvariantCulture));
                 }
