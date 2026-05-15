@@ -1092,13 +1092,6 @@ namespace ZebraLabelPrinter.UI.Forms
                 return;
             }
 
-            if (e.KeyCode == Keys.R && e.Modifiers == Keys.None && _selectedField != null)
-            {
-                RotateSelectedField();
-                e.Handled = true;
-                return;
-            }
-
             // 화살표로 1 dot씩 미세 조정 (Shift+화살표는 10 dots)
             if (_selectedField != null && (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Up || e.KeyCode == Keys.Down))
             {

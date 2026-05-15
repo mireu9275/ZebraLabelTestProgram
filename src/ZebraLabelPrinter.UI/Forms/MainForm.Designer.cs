@@ -466,7 +466,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnRotate.Name = "btnRotate";
             this.btnRotate.Size = new System.Drawing.Size(65, 22);
             this.btnRotate.Text = "회전 ↻";
-            this.btnRotate.ToolTipText = "선택 필드를 90도씩 회전 (Normal → 90 → 180 → 270 → ...). 단축키: R";
+            this.btnRotate.ToolTipText = "선택 필드를 90도씩 회전 (Normal → 90 → 180 → 270 → ...)";
             this.btnRotate.Click += new System.EventHandler(this.btnRotate_Click);
             //
             // toolSep2
