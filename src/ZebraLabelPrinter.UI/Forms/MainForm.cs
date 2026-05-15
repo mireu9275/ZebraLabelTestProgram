@@ -52,11 +52,23 @@ namespace ZebraLabelPrinter.UI.Forms
             ResizeCanvasToLabel();
             pgFieldProps.SelectedObject = null;
 
+            // 더블 버퍼링 활성화 — 드래그 시 깜빡임 제거.
+            // Panel의 DoubleBuffered는 protected라 리플렉션으로 set.
+            EnableDoubleBuffering(pnlCanvas);
+
             // 키보드 처리 (Delete 등) + 휠 줌
             pnlCanvas.TabStop = true;
             pnlCanvas.MouseWheel += new MouseEventHandler(pnlCanvas_MouseWheel);
             this.KeyPreview = true;
             this.KeyDown += new KeyEventHandler(MainForm_KeyDown);
+        }
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            typeof(Control)
+                .GetProperty("DoubleBuffered",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(control, true);
 
             // 라벨 크기 입력 초기화 (mm 기본)
             _suppressLabelSizeHandler = true;
