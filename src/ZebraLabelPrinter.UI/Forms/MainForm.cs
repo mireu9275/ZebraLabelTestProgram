@@ -28,6 +28,7 @@ namespace ZebraLabelPrinter.UI.Forms
         private bool _isDragging;
         private Point _dragStartCanvas;
         private Point _fieldStartLabel;
+        private Point _ghostLabelPos;       // 드래그 중 ghost(빈 테두리)의 라벨 좌표 — 원본 필드는 _fieldStartLabel에 그대로 있음
         private const int CanvasPadding = 10;
         private double _canvasZoom = 1.0;
         private const double MinZoom = 0.25;
@@ -502,47 +503,78 @@ namespace ZebraLabelPrinter.UI.Forms
             if (_template.Fields == null) return;
             foreach (var field in _template.Fields)
             {
-                DrawField(g, field, ReferenceEquals(field, _selectedField));
+                // 드래그 중인 선택 필드는 원본 위치에 옅게 + ghost는 별도로 그림 (아래에서)
+                var isDraggingThis = _isDragging && ReferenceEquals(field, _selectedField);
+                DrawField(g, field, ReferenceEquals(field, _selectedField), faded: isDraggingThis);
             }
 
-            // 드래그 중이면 선택 필드 위에 좌표/크기 라벨을 floating으로 표시
+            // 드래그 중이면 ghost(목적지 미리보기) 빈 테두리 그리기 + 좌표 floating 라벨
             if (_isDragging && _selectedField != null)
             {
-                var r = FieldRect(_selectedField);
+                // 원본 필드 크기에 맞춰 ghost 위치만 _ghostLabelPos로
+                var fr = FieldRect(_selectedField);
+                var ghost = new Rectangle(_ghostLabelPos.X, _ghostLabelPos.Y, fr.Width, fr.Height);
+
+                // 원본 → ghost로 연결선 (어디로 가는지 시각화)
+                using (var conn = new Pen(Color.FromArgb(120, Color.DodgerBlue), 1f / (float)_canvasZoom))
+                {
+                    conn.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
+                    var srcCenter = new Point(fr.X + fr.Width / 2, fr.Y + fr.Height / 2);
+                    var dstCenter = new Point(ghost.X + ghost.Width / 2, ghost.Y + ghost.Height / 2);
+                    g.DrawLine(conn, srcCenter, dstCenter);
+                }
+
+                // Ghost 자체: 빈 사각형 + 굵은 dashed border
+                var ghostPenWidth = 2.5f / (float)_canvasZoom;
+                using (var ghostFill = new SolidBrush(Color.FromArgb(30, Color.DodgerBlue)))
+                    g.FillRectangle(ghostFill, ghost);
+                using (var ghostPen = new Pen(Color.DodgerBlue, ghostPenWidth))
+                {
+                    ghostPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    g.DrawRectangle(ghostPen, ghost);
+                }
+
+                // Ghost 위에 좌표 floating 라벨
                 var mmPerDot = MmPerDot();
                 var info = string.Format("X={0} ({1:F1}mm)  Y={2} ({3:F1}mm)",
-                    _selectedField.X, _selectedField.X * mmPerDot,
-                    _selectedField.Y, _selectedField.Y * mmPerDot);
+                    _ghostLabelPos.X, _ghostLabelPos.X * mmPerDot,
+                    _ghostLabelPos.Y, _ghostLabelPos.Y * mmPerDot);
                 using (var font = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Pixel))
                 using (var back = new SolidBrush(Color.FromArgb(220, Color.Black)))
                 using (var fore = new SolidBrush(Color.White))
                 {
                     var size = g.MeasureString(info, font);
                     var pad = 4;
-                    var rectAbove = new RectangleF(r.X, Math.Max(0, r.Y - size.Height - pad * 2), size.Width + pad * 2, size.Height + pad);
+                    var rectAbove = new RectangleF(ghost.X, Math.Max(0, ghost.Y - size.Height - pad * 2), size.Width + pad * 2, size.Height + pad);
                     g.FillRectangle(back, rectAbove);
                     g.DrawString(info, font, fore, rectAbove.X + pad, rectAbove.Y + pad / 2);
                 }
             }
         }
 
-        private void DrawField(Graphics g, LabelField field, bool selected)
+        private void DrawField(Graphics g, LabelField field, bool selected, bool faded = false)
         {
             var r = FieldRect(field);
-            using (var fill = new SolidBrush(Color.FromArgb(40, selected ? Color.DodgerBlue : Color.Gray)))
+            var fillAlpha = faded ? 15 : 40;
+            var fillColor = selected ? Color.DodgerBlue : Color.Gray;
+            using (var fill = new SolidBrush(Color.FromArgb(fillAlpha, fillColor)))
                 g.FillRectangle(fill, r);
             // 펜 굵기는 줌과 무관하게 화면 픽셀로 일정
             var penWidth = (selected ? 2f : 1f) / (float)_canvasZoom;
-            using (var pen = new Pen(selected ? Color.DodgerBlue : Color.DimGray, penWidth))
+            var penColor = selected
+                ? (faded ? Color.FromArgb(120, Color.DodgerBlue) : Color.DodgerBlue)
+                : Color.DimGray;
+            using (var pen = new Pen(penColor, penWidth))
             {
-                if (!selected) pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                if (!selected || faded) pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                 g.DrawRectangle(pen, r);
             }
             var label = "[" + field.FieldType + "] " + (field.Name ?? "");
             if (!string.IsNullOrEmpty(field.DataBindingKey)) label += " {" + field.DataBindingKey + "}";
             // 라벨 폰트는 라벨 dots 좌표계 — 줌이 알아서 스케일
             var fontSizeDots = 12f;
-            using (var fontBrush = new SolidBrush(Color.Black))
+            var textAlpha = faded ? 100 : 255;
+            using (var fontBrush = new SolidBrush(Color.FromArgb(textAlpha, Color.Black)))
             using (var labelFont = new Font("Segoe UI", fontSizeDots, GraphicsUnit.Pixel))
                 g.DrawString(label, labelFont, fontBrush, r.X + 2, r.Y + 2);
         }
@@ -570,6 +602,7 @@ namespace ZebraLabelPrinter.UI.Forms
                 _isDragging = true;
                 _dragStartCanvas = e.Location;
                 _fieldStartLabel = new Point(hit.X, hit.Y);
+                _ghostLabelPos = _fieldStartLabel; // 처음엔 원본 위치에 ghost
             }
         }
 
@@ -584,24 +617,32 @@ namespace ZebraLabelPrinter.UI.Forms
 
             if (!_isDragging || _selectedField == null) return;
 
-            // 화면 픽셀 이동량을 라벨 dots로 환산
+            // 화면 픽셀 이동량을 라벨 dots로 환산, ghost 위치 갱신 — 원본 필드 X/Y는 안 건드림
             var dxDots = (int)Math.Round((e.X - _dragStartCanvas.X) / _canvasZoom);
             var dyDots = (int)Math.Round((e.Y - _dragStartCanvas.Y) / _canvasZoom);
             var newX = Math.Max(0, _fieldStartLabel.X + dxDots);
             var newY = Math.Max(0, _fieldStartLabel.Y + dyDots);
             // Shift 누르면 스냅 해제, 기본은 스냅 ON
             var snap = (Control.ModifierKeys & Keys.Shift) != Keys.Shift;
-            _selectedField.X = SnapToGrid(newX, snap);
-            _selectedField.Y = SnapToGrid(newY, snap);
+            _ghostLabelPos = new Point(SnapToGrid(newX, snap), SnapToGrid(newY, snap));
             pnlCanvas.Invalidate();
-            pgFieldProps.Refresh();
         }
 
         private void pnlCanvas_MouseUp(object sender, MouseEventArgs e)
         {
             if (!_isDragging) return;
             _isDragging = false;
-            RegenerateZplFromTemplate();
+            if (_selectedField != null && (_ghostLabelPos.X != _selectedField.X || _ghostLabelPos.Y != _selectedField.Y))
+            {
+                _selectedField.X = _ghostLabelPos.X;
+                _selectedField.Y = _ghostLabelPos.Y;
+                pgFieldProps.Refresh();
+                RegenerateZplFromTemplate();
+            }
+            else
+            {
+                pnlCanvas.Invalidate();
+            }
         }
 
         private void pnlCanvas_MouseWheel(object sender, MouseEventArgs e)
