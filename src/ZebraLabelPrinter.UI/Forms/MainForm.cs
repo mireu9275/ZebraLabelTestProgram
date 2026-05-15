@@ -29,11 +29,34 @@ namespace ZebraLabelPrinter.UI.Forms
         private void LoadDefaults()
         {
             LoadInstalledPrinters();
+            EnsureKoreanFont();
 
             txtPartNo.Text = "PART-12345";
             txtLotNo.Text = "2605150099";
             txtQr.Text = "PART-12345|2605150099";
             numCopies.Value = 1;
+        }
+
+        private void EnsureKoreanFont()
+        {
+            var candidates = new[]
+            {
+                @"C:\Windows\Fonts\malgun.ttf",
+                @"C:\Windows\Fonts\NanumGothic.ttf",
+                @"C:\Windows\Fonts\gulim.ttc"
+            };
+
+            foreach (var path in candidates)
+            {
+                if (!System.IO.File.Exists(path)) continue;
+                var fileName = System.IO.Path.GetFileName(path).ToUpperInvariant();
+                if (_previewService.TryRegisterFontFromFile('E', fileName, path))
+                {
+                    _template.FontReference = "E:" + fileName;
+                    return;
+                }
+            }
+            // 한글 폰트를 못 찾으면 FontReference는 null로 두고 기본 ^A0 사용 (한글이 박스로 나옴)
         }
 
         private void LoadInstalledPrinters()
