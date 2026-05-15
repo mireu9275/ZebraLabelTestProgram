@@ -127,9 +127,9 @@ namespace ZebraLabelPrinter.UI.Forms
             this.lblGridInfo.ForeColor = System.Drawing.Color.DarkBlue;
 
             // 버튼
-            this.btnPrint.Location = new System.Drawing.Point(220, 315);
-            this.btnPrint.Size = new System.Drawing.Size(85, 35);
-            this.btnPrint.Text = "출력";
+            this.btnPrint.Location = new System.Drawing.Point(195, 315);
+            this.btnPrint.Size = new System.Drawing.Size(110, 35);
+            this.btnPrint.Text = "미리보기 ▶ 출력";
             this.btnPrint.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnPrint.Click += new System.EventHandler(this.btnPrint_Click);
             this.btnCancel.Location = new System.Drawing.Point(315, 315);

@@ -87,7 +87,6 @@ namespace ZebraLabelPrinter.UI.Forms
                 var data = new List<IDictionary<string, string>>();
                 for (int i = 0; i < count; i++)
                 {
-                    // 같은 데이터로 N장 출력 (시리얼 데이터 처리는 별도 기능으로 추후)
                     data.Add(_bindingValues ?? new Dictionary<string, string>());
                 }
 
@@ -102,8 +101,16 @@ namespace ZebraLabelPrinter.UI.Forms
                     Count = count
                 };
 
-                new SheetPrintService().Print(req);
-                MessageBox.Show(this, "출력 완료", "A4 출력", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // 미리보기 다이얼로그 — WinForms 내장. 페이지 넘김/줌/인쇄 버튼이 모두 들어있음.
+                using (var doc = new SheetPrintService().BuildPrintDocument(req))
+                using (var preview = new PrintPreviewDialog())
+                {
+                    preview.Document = doc;
+                    preview.WindowState = FormWindowState.Maximized;
+                    preview.UseAntiAlias = true;
+                    preview.ShowDialog(this);
+                }
+
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
