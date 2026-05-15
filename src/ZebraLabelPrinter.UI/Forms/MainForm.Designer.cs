@@ -56,8 +56,13 @@ namespace ZebraLabelPrinter.UI.Forms
             this.toolSep1 = new System.Windows.Forms.ToolStripSeparator();
             this.btnBringToFront = new System.Windows.Forms.ToolStripButton();
             this.btnSendToBack = new System.Windows.Forms.ToolStripButton();
+            this.btnRotate = new System.Windows.Forms.ToolStripButton();
             this.toolSep2 = new System.Windows.Forms.ToolStripSeparator();
             this.btnDeleteField = new System.Windows.Forms.ToolStripButton();
+            this.btnClearAll = new System.Windows.Forms.ToolStripButton();
+            this.toolSep3 = new System.Windows.Forms.ToolStripSeparator();
+            this.btnSaveTemplate = new System.Windows.Forms.ToolStripButton();
+            this.btnLoadTemplate = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
@@ -376,8 +381,9 @@ namespace ZebraLabelPrinter.UI.Forms
             this.toolStripDesigner.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.btnAddText, this.btnAddBarcode, this.btnAddQr, this.btnAddBox,
                 this.btnAddHLine, this.btnAddVLine,
-                this.toolSep1, this.btnBringToFront, this.btnSendToBack,
-                this.toolSep2, this.btnDeleteField });
+                this.toolSep1, this.btnBringToFront, this.btnSendToBack, this.btnRotate,
+                this.toolSep2, this.btnDeleteField, this.btnClearAll,
+                this.toolSep3, this.btnSaveTemplate, this.btnLoadTemplate });
             this.toolStripDesigner.Location = new System.Drawing.Point(3, 3);
             this.toolStripDesigner.Name = "toolStripDesigner";
             this.toolStripDesigner.Size = new System.Drawing.Size(722, 25);
@@ -454,6 +460,15 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnSendToBack.ToolTipText = "선택 필드를 그리는 순서 맨 앞으로 이동 (시각적으로 맨 뒤)";
             this.btnSendToBack.Click += new System.EventHandler(this.btnSendToBack_Click);
             //
+            // btnRotate
+            //
+            this.btnRotate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnRotate.Name = "btnRotate";
+            this.btnRotate.Size = new System.Drawing.Size(65, 22);
+            this.btnRotate.Text = "회전 ↻";
+            this.btnRotate.ToolTipText = "선택 필드를 90도씩 회전 (Normal → 90 → 180 → 270 → ...). 단축키: R";
+            this.btnRotate.Click += new System.EventHandler(this.btnRotate_Click);
+            //
             // toolSep2
             //
             this.toolSep2.Name = "toolSep2";
@@ -465,7 +480,40 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnDeleteField.Name = "btnDeleteField";
             this.btnDeleteField.Size = new System.Drawing.Size(60, 22);
             this.btnDeleteField.Text = "삭제";
+            this.btnDeleteField.ToolTipText = "선택 필드 삭제 (Delete 키)";
             this.btnDeleteField.Click += new System.EventHandler(this.btnDeleteField_Click);
+            //
+            // btnClearAll
+            //
+            this.btnClearAll.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnClearAll.Name = "btnClearAll";
+            this.btnClearAll.Size = new System.Drawing.Size(75, 22);
+            this.btnClearAll.Text = "전체 삭제";
+            this.btnClearAll.ToolTipText = "모든 필드를 한 번에 삭제 (확인 다이얼로그 뜸)";
+            this.btnClearAll.Click += new System.EventHandler(this.btnClearAll_Click);
+            //
+            // toolSep3
+            //
+            this.toolSep3.Name = "toolSep3";
+            this.toolSep3.Size = new System.Drawing.Size(6, 25);
+            //
+            // btnSaveTemplate
+            //
+            this.btnSaveTemplate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnSaveTemplate.Name = "btnSaveTemplate";
+            this.btnSaveTemplate.Size = new System.Drawing.Size(60, 22);
+            this.btnSaveTemplate.Text = "💾 저장";
+            this.btnSaveTemplate.ToolTipText = "현재 디자이너 템플릿을 .zlbl 파일로 저장";
+            this.btnSaveTemplate.Click += new System.EventHandler(this.btnSaveTemplate_Click);
+            //
+            // btnLoadTemplate
+            //
+            this.btnLoadTemplate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnLoadTemplate.Name = "btnLoadTemplate";
+            this.btnLoadTemplate.Size = new System.Drawing.Size(75, 22);
+            this.btnLoadTemplate.Text = "📂 불러오기";
+            this.btnLoadTemplate.ToolTipText = ".zlbl 파일에서 디자이너 템플릿 복원";
+            this.btnLoadTemplate.Click += new System.EventHandler(this.btnLoadTemplate_Click);
             //
             // splitDesigner
             //
@@ -595,8 +643,13 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.ToolStripSeparator toolSep1;
         private System.Windows.Forms.ToolStripButton btnBringToFront;
         private System.Windows.Forms.ToolStripButton btnSendToBack;
+        private System.Windows.Forms.ToolStripButton btnRotate;
         private System.Windows.Forms.ToolStripSeparator toolSep2;
         private System.Windows.Forms.ToolStripButton btnDeleteField;
+        private System.Windows.Forms.ToolStripButton btnClearAll;
+        private System.Windows.Forms.ToolStripSeparator toolSep3;
+        private System.Windows.Forms.ToolStripButton btnSaveTemplate;
+        private System.Windows.Forms.ToolStripButton btnLoadTemplate;
         private System.Windows.Forms.SplitContainer splitDesigner;
         private System.Windows.Forms.Panel pnlCanvas;
         private System.Windows.Forms.PropertyGrid pgFieldProps;

@@ -16,7 +16,7 @@ namespace ZebraLabelPrinter.UI.Forms
 {
     public partial class MainForm : Form
     {
-        private readonly LabelTemplate _template;
+        private LabelTemplate _template;
         private readonly LabelPreviewService _previewService = new LabelPreviewService();
         // 미리보기/프린터 둘 다 같은 ZPL 사용 (^CI28 + ^A1 + KFONT3, raw UTF-8 한글)
         private readonly KoreanFontProfile _profile = KoreanFontProfile.Kfont3();
@@ -481,6 +481,11 @@ namespace ZebraLabelPrinter.UI.Forms
                 default:
                     w = h = 40; break;
             }
+            // 회전 90/270이면 가로세로 swap (시각 표시용)
+            if (f.Rotation == LabelFieldRotation.Rotate90 || f.Rotation == LabelFieldRotation.Rotate270)
+            {
+                var tmp = w; w = h; h = tmp;
+            }
             return new Rectangle(f.X, f.Y, w, h);
         }
 
@@ -639,6 +644,7 @@ namespace ZebraLabelPrinter.UI.Forms
             }
             var label = "[" + field.FieldType + "] " + (field.Name ?? "");
             if (!string.IsNullOrEmpty(field.DataBindingKey)) label += " {" + field.DataBindingKey + "}";
+            if (field.Rotation != LabelFieldRotation.Normal) label += " ↻" + (int)field.Rotation;
             // 라벨 폰트는 라벨 dots 좌표계 — 줌이 알아서 스케일
             var fontSizeDots = 12f;
             var textAlpha = faded ? 100 : 255;
@@ -867,6 +873,112 @@ namespace ZebraLabelPrinter.UI.Forms
             return hit != null ? Cursors.SizeAll : Cursors.Default;
         }
 
+        private void btnRotate_Click(object sender, EventArgs e)
+        {
+            if (_selectedField == null) { SetStatus("회전할 필드를 선택하세요"); return; }
+            RotateSelectedField();
+        }
+
+        private void RotateSelectedField()
+        {
+            if (_selectedField == null) return;
+            // Normal → 90 → 180 → 270 → Normal 순환
+            switch (_selectedField.Rotation)
+            {
+                case LabelFieldRotation.Normal: _selectedField.Rotation = LabelFieldRotation.Rotate90; break;
+                case LabelFieldRotation.Rotate90: _selectedField.Rotation = LabelFieldRotation.Rotate180; break;
+                case LabelFieldRotation.Rotate180: _selectedField.Rotation = LabelFieldRotation.Rotate270; break;
+                default: _selectedField.Rotation = LabelFieldRotation.Normal; break;
+            }
+            pgFieldProps.Refresh();
+            pnlCanvas.Invalidate();
+            RegenerateZplFromTemplate();
+            SetStatus("회전: " + _selectedField.Name + " → " + _selectedField.Rotation);
+        }
+
+        private void btnClearAll_Click(object sender, EventArgs e)
+        {
+            if (_template.Fields.Count == 0) { SetStatus("이미 비어있음"); return; }
+            var result = MessageBox.Show(this,
+                "모든 필드(" + _template.Fields.Count + "개)를 삭제할까요?",
+                "전체 삭제", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes) return;
+
+            _template.Fields.Clear();
+            SelectField(null);
+            RebuildDataBindings();
+            RegenerateZplFromTemplate();
+            SetStatus("전체 삭제 완료");
+        }
+
+        private void btnSaveTemplate_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new SaveFileDialog
+            {
+                Filter = "Zebra 라벨 템플릿 (*.zlbl)|*.zlbl|모든 파일 (*.*)|*.*",
+                DefaultExt = "zlbl",
+                FileName = (_template.TemplateCode ?? "label") + ".zlbl"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
+                    using (var w = File.Create(dlg.FileName))
+                    {
+                        serializer.Serialize(w, _template);
+                    }
+                    SetStatus("저장 완료: " + dlg.FileName);
+                }
+                catch (Exception ex)
+                {
+                    ShowError("저장 실패", ex);
+                }
+            }
+        }
+
+        private void btnLoadTemplate_Click(object sender, EventArgs e)
+        {
+            using (var dlg = new OpenFileDialog
+            {
+                Filter = "Zebra 라벨 템플릿 (*.zlbl)|*.zlbl|모든 파일 (*.*)|*.*",
+                DefaultExt = "zlbl"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
+                    using (var r = File.OpenRead(dlg.FileName))
+                    {
+                        var loaded = (LabelTemplate)serializer.Deserialize(r);
+                        if (loaded == null) throw new InvalidOperationException("파일에서 템플릿을 읽지 못함");
+                        if (loaded.Fields == null) loaded.Fields = new System.Collections.Generic.List<LabelField>();
+                        _template = loaded;
+                    }
+                    // 로드 후 UI 동기화
+                    SelectField(null);
+                    ResizeCanvasToLabel();
+                    _suppressLabelSizeHandler = true;
+                    try
+                    {
+                        numLabelWidth.Value = (decimal)DotsToUnit(_template.WidthDots);
+                        numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
+                        numCopies.Value = Math.Max(1, _template.Copies);
+                    }
+                    finally { _suppressLabelSizeHandler = false; }
+                    RebuildDataBindings();
+                    RegenerateZplFromTemplate();
+                    pnlCanvas.Invalidate();
+                    SetStatus("불러오기 완료: " + dlg.FileName + " (필드 " + _template.Fields.Count + "개)");
+                }
+                catch (Exception ex)
+                {
+                    ShowError("불러오기 실패", ex);
+                }
+            }
+        }
+
         private void btnBringToFront_Click(object sender, EventArgs e)
         {
             if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
@@ -907,6 +1019,13 @@ namespace ZebraLabelPrinter.UI.Forms
             if (e.KeyCode == Keys.Delete && _selectedField != null)
             {
                 btnDeleteField_Click(sender, EventArgs.Empty);
+                e.Handled = true;
+                return;
+            }
+
+            if (e.KeyCode == Keys.R && e.Modifiers == Keys.None && _selectedField != null)
+            {
+                RotateSelectedField();
                 e.Handled = true;
                 return;
             }
