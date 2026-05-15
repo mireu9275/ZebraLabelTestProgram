@@ -550,11 +550,10 @@ namespace ZebraLabelPrinter.UI.Forms
                 }
                 else if (result == DialogResult.Yes)
                 {
-                    btnSaveTemplate_Click(this, EventArgs.Empty);
-                    // 저장 다이얼로그에서 사용자가 취소하면 _isDirty 그대로 → 종료 중단
-                    if (_isDirty)
+                    // SaveCurrent: 기존 파일에 직접 저장 또는 SaveAs 다이얼로그
+                    if (!SaveCurrent())
                     {
-                        e.Cancel = true;
+                        e.Cancel = true; // 저장 취소/실패 → 종료 중단
                     }
                 }
                 // No: 그대로 종료
@@ -1066,29 +1065,53 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void btnSaveTemplate_Click(object sender, EventArgs e)
         {
+            SaveCurrent();
+        }
+
+        // 현재 파일에 직접 저장. 처음이면 SaveAs 다이얼로그. true=저장 성공, false=취소/실패
+        private bool SaveCurrent()
+        {
+            if (string.IsNullOrEmpty(_currentFilePath))
+            {
+                return SaveAs();
+            }
+            return SaveToPath(_currentFilePath);
+        }
+
+        private bool SaveAs()
+        {
             using (var dlg = new SaveFileDialog
             {
                 Filter = "Zebra 라벨 템플릿 (*.zlbl)|*.zlbl|모든 파일 (*.*)|*.*",
                 DefaultExt = "zlbl",
-                FileName = (_template.TemplateCode ?? "label") + ".zlbl"
+                FileName = string.IsNullOrEmpty(_currentFilePath)
+                    ? (_template.TemplateCode ?? "label") + ".zlbl"
+                    : Path.GetFileName(_currentFilePath)
             })
             {
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                try
+                if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+                return SaveToPath(dlg.FileName);
+            }
+        }
+
+        private bool SaveToPath(string path)
+        {
+            try
+            {
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
+                using (var w = File.Create(path))
                 {
-                    var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
-                    using (var w = File.Create(dlg.FileName))
-                    {
-                        serializer.Serialize(w, _template);
-                    }
-                    _currentFilePath = dlg.FileName;
-                    ClearDirty();
-                    SetStatus("저장 완료: " + dlg.FileName);
+                    serializer.Serialize(w, _template);
                 }
-                catch (Exception ex)
-                {
-                    ShowError("저장 실패", ex);
-                }
+                _currentFilePath = path;
+                ClearDirty();
+                SetStatus("저장 완료: " + path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ShowError("저장 실패", ex);
+                return false;
             }
         }
 
@@ -1172,6 +1195,14 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
+            // 전역 단축키 (어느 탭에서든 동작)
+            if (e.Control && !e.Shift && !e.Alt && e.KeyCode == Keys.S)
+            {
+                SaveCurrent();
+                e.Handled = true;
+                return;
+            }
+
             // 디자이너 탭에서만 키 처리
             if (tabRight.SelectedTab != tabDesigner) return;
 

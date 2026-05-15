@@ -506,7 +506,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnSaveTemplate.Name = "btnSaveTemplate";
             this.btnSaveTemplate.Size = new System.Drawing.Size(60, 22);
             this.btnSaveTemplate.Text = "💾 저장";
-            this.btnSaveTemplate.ToolTipText = "현재 디자이너 템플릿을 .zlbl 파일로 저장";
+            this.btnSaveTemplate.ToolTipText = "현재 디자이너 템플릿을 .zlbl 파일로 저장 (Ctrl+S)";
             this.btnSaveTemplate.Click += new System.EventHandler(this.btnSaveTemplate_Click);
             //
             // btnLoadTemplate
