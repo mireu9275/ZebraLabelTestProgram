@@ -334,6 +334,9 @@ namespace ZebraLabelPrinter.UI.Forms
 
         // ========== Designer ==========
 
+        private const int BarcodeModuleWidth = 2;       // ^BY2,...  (빌더와 동기화)
+        private const int BarcodeHumanReadableHeight = 28; // ^BC...,Y 일 때 하단 인쇄 텍스트 높이 추정
+
         private Rectangle FieldRect(LabelField f)
         {
             // 라벨 dots 좌표계 기준 (transform이 줌/패딩 처리)
@@ -344,19 +347,42 @@ namespace ZebraLabelPrinter.UI.Forms
                     w = Math.Max(20, (f.Value?.Length ?? f.Name?.Length ?? 6) * Math.Max(f.FontWidth, 10));
                     h = Math.Max(f.FontHeight, 20);
                     break;
+
                 case LabelFieldType.Barcode128:
+                    {
+                        // Code128 폭 = (시작 + 데이터 + 체크섬 + 정지) × 11 + 정지 13 → 대략 (n+3)×11 + 2
+                        var n = (f.Value?.Length ?? 8);
+                        var modules = n * 11 + 35;
+                        w = modules * BarcodeModuleWidth;
+                        h = (f.Height > 0 ? f.Height : 80) + BarcodeHumanReadableHeight;
+                    }
+                    break;
+
                 case LabelFieldType.BarcodeEan13:
-                    w = f.Width > 0 ? f.Width : 200;
-                    h = f.Height > 0 ? f.Height : 80;
+                    {
+                        // EAN13는 항상 95 modules
+                        w = 95 * BarcodeModuleWidth;
+                        h = (f.Height > 0 ? f.Height : 80) + BarcodeHumanReadableHeight;
+                    }
                     break;
+
                 case LabelFieldType.QrCode:
-                    w = h = Math.Max(f.FontWidth * 21, 80);
+                    {
+                        // QR 버전(데이터 길이 기준 대략): v1=21, v2=25, v3=29, v4=33, v5=37...
+                        var len = f.Value?.Length ?? 10;
+                        var version = len <= 14 ? 1 : len <= 26 ? 2 : len <= 42 ? 3 : len <= 62 ? 4 : 5;
+                        var modules = 17 + version * 4;
+                        var mag = Math.Max(1, f.FontWidth > 0 ? f.FontWidth : 5);
+                        w = h = modules * mag;
+                    }
                     break;
+
                 case LabelFieldType.Box:
                 case LabelFieldType.Line:
                     w = Math.Max(f.Width, 10);
                     h = Math.Max(f.Height, 10);
                     break;
+
                 default:
                     w = h = 40; break;
             }
@@ -404,6 +430,26 @@ namespace ZebraLabelPrinter.UI.Forms
             foreach (var field in _template.Fields)
             {
                 DrawField(g, field, ReferenceEquals(field, _selectedField));
+            }
+
+            // 드래그 중이면 선택 필드 위에 좌표/크기 라벨을 floating으로 표시
+            if (_isDragging && _selectedField != null)
+            {
+                var r = FieldRect(_selectedField);
+                var mmPerDot = MmPerDot();
+                var info = string.Format("X={0} ({1:F1}mm)  Y={2} ({3:F1}mm)",
+                    _selectedField.X, _selectedField.X * mmPerDot,
+                    _selectedField.Y, _selectedField.Y * mmPerDot);
+                using (var font = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Pixel))
+                using (var back = new SolidBrush(Color.FromArgb(220, Color.Black)))
+                using (var fore = new SolidBrush(Color.White))
+                {
+                    var size = g.MeasureString(info, font);
+                    var pad = 4;
+                    var rectAbove = new RectangleF(r.X, Math.Max(0, r.Y - size.Height - pad * 2), size.Width + pad * 2, size.Height + pad);
+                    g.FillRectangle(back, rectAbove);
+                    g.DrawString(info, font, fore, rectAbove.X + pad, rectAbove.Y + pad / 2);
+                }
             }
         }
 
@@ -456,7 +502,15 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void pnlCanvas_MouseMove(object sender, MouseEventArgs e)
         {
+            // 항상 status bar에 마우스 위치 (라벨 dots/mm) 표시
+            var labelPt = CanvasToLabel(e.Location);
+            var mmX = labelPt.X * MmPerDot();
+            var mmY = labelPt.Y * MmPerDot();
+            SetStatus(string.Format("커서: X={0}dot ({1:F1}mm), Y={2}dot ({3:F1}mm)", labelPt.X, mmX, labelPt.Y, mmY)
+                     + (_selectedField != null ? "  |  선택: " + _selectedField.Name : ""));
+
             if (!_isDragging || _selectedField == null) return;
+
             // 화면 픽셀 이동량을 라벨 dots로 환산
             var dxDots = (int)Math.Round((e.X - _dragStartCanvas.X) / _canvasZoom);
             var dyDots = (int)Math.Round((e.Y - _dragStartCanvas.Y) / _canvasZoom);
