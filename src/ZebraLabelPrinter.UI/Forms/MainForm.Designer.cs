@@ -32,12 +32,9 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpPrinter = new System.Windows.Forms.GroupBox();
             this.numCopies = new System.Windows.Forms.NumericUpDown();
             this.lblCopies = new System.Windows.Forms.Label();
-            this.cmbDpi = new System.Windows.Forms.ComboBox();
-            this.lblDpi = new System.Windows.Forms.Label();
-            this.numPort = new System.Windows.Forms.NumericUpDown();
-            this.lblPort = new System.Windows.Forms.Label();
-            this.txtIp = new System.Windows.Forms.TextBox();
-            this.lblIp = new System.Windows.Forms.Label();
+            this.btnRefreshPrinters = new System.Windows.Forms.Button();
+            this.cmbPrinter = new System.Windows.Forms.ComboBox();
+            this.lblPrinter = new System.Windows.Forms.Label();
             this.tabRight = new System.Windows.Forms.TabControl();
             this.tabPreview = new System.Windows.Forms.TabPage();
             this.picPreview = new System.Windows.Forms.PictureBox();
@@ -53,7 +50,6 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpData.SuspendLayout();
             this.grpPrinter.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numPort)).BeginInit();
             this.tabRight.SuspendLayout();
             this.tabPreview.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
@@ -69,7 +65,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.splitContainer.Panel1.Controls.Add(this.panelLeft);
             this.splitContainer.Panel2.Controls.Add(this.tabRight);
             this.splitContainer.Size = new System.Drawing.Size(1100, 678);
-            this.splitContainer.SplitterDistance = 340;
+            this.splitContainer.SplitterDistance = 360;
             this.splitContainer.TabIndex = 0;
             //
             // panelLeft
@@ -83,7 +79,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.panelLeft.Location = new System.Drawing.Point(0, 0);
             this.panelLeft.Name = "panelLeft";
             this.panelLeft.Padding = new System.Windows.Forms.Padding(12);
-            this.panelLeft.Size = new System.Drawing.Size(340, 678);
+            this.panelLeft.Size = new System.Drawing.Size(360, 678);
             this.panelLeft.TabIndex = 0;
             //
             // btnPrint
@@ -91,17 +87,17 @@ namespace ZebraLabelPrinter.UI.Forms
             this.btnPrint.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnPrint.Location = new System.Drawing.Point(12, 540);
             this.btnPrint.Name = "btnPrint";
-            this.btnPrint.Size = new System.Drawing.Size(310, 44);
+            this.btnPrint.Size = new System.Drawing.Size(330, 44);
             this.btnPrint.TabIndex = 4;
-            this.btnPrint.Text = "프린터로 전송 (TCP 9100)";
+            this.btnPrint.Text = "프린터로 전송";
             this.btnPrint.UseVisualStyleBackColor = true;
             this.btnPrint.Click += new System.EventHandler(this.btnPrint_Click);
             //
             // btnPreview
             //
-            this.btnPreview.Location = new System.Drawing.Point(170, 490);
+            this.btnPreview.Location = new System.Drawing.Point(180, 490);
             this.btnPreview.Name = "btnPreview";
-            this.btnPreview.Size = new System.Drawing.Size(152, 40);
+            this.btnPreview.Size = new System.Drawing.Size(162, 40);
             this.btnPreview.TabIndex = 3;
             this.btnPreview.Text = "미리보기";
             this.btnPreview.UseVisualStyleBackColor = true;
@@ -111,7 +107,7 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.btnGenerate.Location = new System.Drawing.Point(12, 490);
             this.btnGenerate.Name = "btnGenerate";
-            this.btnGenerate.Size = new System.Drawing.Size(152, 40);
+            this.btnGenerate.Size = new System.Drawing.Size(162, 40);
             this.btnGenerate.TabIndex = 2;
             this.btnGenerate.Text = "ZPL 생성";
             this.btnGenerate.UseVisualStyleBackColor = true;
@@ -125,58 +121,58 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpData.Controls.Add(this.lblLotNo);
             this.grpData.Controls.Add(this.txtPartNo);
             this.grpData.Controls.Add(this.lblPartNo);
-            this.grpData.Location = new System.Drawing.Point(12, 280);
+            this.grpData.Location = new System.Drawing.Point(12, 230);
             this.grpData.Name = "grpData";
-            this.grpData.Size = new System.Drawing.Size(310, 195);
+            this.grpData.Size = new System.Drawing.Size(330, 245);
             this.grpData.TabIndex = 1;
             this.grpData.TabStop = false;
             this.grpData.Text = "데이터 바인딩";
             //
             // txtQr
             //
-            this.txtQr.Location = new System.Drawing.Point(110, 130);
+            this.txtQr.Location = new System.Drawing.Point(110, 160);
             this.txtQr.Name = "txtQr";
-            this.txtQr.Size = new System.Drawing.Size(190, 23);
+            this.txtQr.Size = new System.Drawing.Size(210, 23);
             this.txtQr.TabIndex = 5;
             //
             // lblQr
             //
             this.lblQr.AutoSize = true;
-            this.lblQr.Location = new System.Drawing.Point(15, 133);
+            this.lblQr.Location = new System.Drawing.Point(15, 163);
             this.lblQr.Name = "lblQr";
-            this.lblQr.Size = new System.Drawing.Size(50, 15);
+            this.lblQr.Size = new System.Drawing.Size(30, 15);
             this.lblQr.TabIndex = 4;
             this.lblQr.Text = "QR:";
             //
             // txtLotNo
             //
-            this.txtLotNo.Location = new System.Drawing.Point(110, 85);
+            this.txtLotNo.Location = new System.Drawing.Point(110, 110);
             this.txtLotNo.Name = "txtLotNo";
-            this.txtLotNo.Size = new System.Drawing.Size(190, 23);
+            this.txtLotNo.Size = new System.Drawing.Size(210, 23);
             this.txtLotNo.TabIndex = 3;
             //
             // lblLotNo
             //
             this.lblLotNo.AutoSize = true;
-            this.lblLotNo.Location = new System.Drawing.Point(15, 88);
+            this.lblLotNo.Location = new System.Drawing.Point(15, 113);
             this.lblLotNo.Name = "lblLotNo";
-            this.lblLotNo.Size = new System.Drawing.Size(70, 15);
+            this.lblLotNo.Size = new System.Drawing.Size(60, 15);
             this.lblLotNo.TabIndex = 2;
             this.lblLotNo.Text = "LOT_NO:";
             //
             // txtPartNo
             //
-            this.txtPartNo.Location = new System.Drawing.Point(110, 40);
+            this.txtPartNo.Location = new System.Drawing.Point(110, 60);
             this.txtPartNo.Name = "txtPartNo";
-            this.txtPartNo.Size = new System.Drawing.Size(190, 23);
+            this.txtPartNo.Size = new System.Drawing.Size(210, 23);
             this.txtPartNo.TabIndex = 1;
             //
             // lblPartNo
             //
             this.lblPartNo.AutoSize = true;
-            this.lblPartNo.Location = new System.Drawing.Point(15, 43);
+            this.lblPartNo.Location = new System.Drawing.Point(15, 63);
             this.lblPartNo.Name = "lblPartNo";
-            this.lblPartNo.Size = new System.Drawing.Size(70, 15);
+            this.lblPartNo.Size = new System.Drawing.Size(65, 15);
             this.lblPartNo.TabIndex = 0;
             this.lblPartNo.Text = "PART_NO:";
             //
@@ -184,90 +180,63 @@ namespace ZebraLabelPrinter.UI.Forms
             //
             this.grpPrinter.Controls.Add(this.numCopies);
             this.grpPrinter.Controls.Add(this.lblCopies);
-            this.grpPrinter.Controls.Add(this.cmbDpi);
-            this.grpPrinter.Controls.Add(this.lblDpi);
-            this.grpPrinter.Controls.Add(this.numPort);
-            this.grpPrinter.Controls.Add(this.lblPort);
-            this.grpPrinter.Controls.Add(this.txtIp);
-            this.grpPrinter.Controls.Add(this.lblIp);
+            this.grpPrinter.Controls.Add(this.btnRefreshPrinters);
+            this.grpPrinter.Controls.Add(this.cmbPrinter);
+            this.grpPrinter.Controls.Add(this.lblPrinter);
             this.grpPrinter.Location = new System.Drawing.Point(12, 15);
             this.grpPrinter.Name = "grpPrinter";
-            this.grpPrinter.Size = new System.Drawing.Size(310, 250);
+            this.grpPrinter.Size = new System.Drawing.Size(330, 200);
             this.grpPrinter.TabIndex = 0;
             this.grpPrinter.TabStop = false;
             this.grpPrinter.Text = "프린터 설정";
             //
             // numCopies
             //
-            this.numCopies.Location = new System.Drawing.Point(110, 180);
+            this.numCopies.Location = new System.Drawing.Point(110, 150);
             this.numCopies.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
             this.numCopies.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             this.numCopies.Name = "numCopies";
             this.numCopies.Size = new System.Drawing.Size(80, 23);
-            this.numCopies.TabIndex = 7;
+            this.numCopies.TabIndex = 4;
             this.numCopies.Value = new decimal(new int[] { 1, 0, 0, 0 });
             //
             // lblCopies
             //
             this.lblCopies.AutoSize = true;
-            this.lblCopies.Location = new System.Drawing.Point(15, 183);
+            this.lblCopies.Location = new System.Drawing.Point(15, 153);
             this.lblCopies.Name = "lblCopies";
             this.lblCopies.Size = new System.Drawing.Size(40, 15);
-            this.lblCopies.TabIndex = 6;
+            this.lblCopies.TabIndex = 3;
             this.lblCopies.Text = "매수:";
             //
-            // cmbDpi
+            // btnRefreshPrinters
             //
-            this.cmbDpi.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbDpi.FormattingEnabled = true;
-            this.cmbDpi.Items.AddRange(new object[] { "203", "300", "600" });
-            this.cmbDpi.Location = new System.Drawing.Point(110, 135);
-            this.cmbDpi.Name = "cmbDpi";
-            this.cmbDpi.Size = new System.Drawing.Size(80, 23);
-            this.cmbDpi.TabIndex = 5;
+            this.btnRefreshPrinters.Location = new System.Drawing.Point(15, 100);
+            this.btnRefreshPrinters.Name = "btnRefreshPrinters";
+            this.btnRefreshPrinters.Size = new System.Drawing.Size(120, 30);
+            this.btnRefreshPrinters.TabIndex = 2;
+            this.btnRefreshPrinters.Text = "프린터 새로고침";
+            this.btnRefreshPrinters.UseVisualStyleBackColor = true;
+            this.btnRefreshPrinters.Click += new System.EventHandler(this.btnRefreshPrinters_Click);
             //
-            // lblDpi
+            // cmbPrinter
             //
-            this.lblDpi.AutoSize = true;
-            this.lblDpi.Location = new System.Drawing.Point(15, 138);
-            this.lblDpi.Name = "lblDpi";
-            this.lblDpi.Size = new System.Drawing.Size(40, 15);
-            this.lblDpi.TabIndex = 4;
-            this.lblDpi.Text = "DPI:";
+            this.cmbPrinter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbPrinter.DropDownWidth = 330;
+            this.cmbPrinter.FormattingEnabled = true;
+            this.cmbPrinter.Location = new System.Drawing.Point(15, 60);
+            this.cmbPrinter.Name = "cmbPrinter";
+            this.cmbPrinter.Size = new System.Drawing.Size(300, 23);
+            this.cmbPrinter.TabIndex = 1;
             //
-            // numPort
+            // lblPrinter
             //
-            this.numPort.Location = new System.Drawing.Point(110, 90);
-            this.numPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
-            this.numPort.Name = "numPort";
-            this.numPort.Size = new System.Drawing.Size(120, 23);
-            this.numPort.TabIndex = 3;
-            this.numPort.Value = new decimal(new int[] { 9100, 0, 0, 0 });
-            //
-            // lblPort
-            //
-            this.lblPort.AutoSize = true;
-            this.lblPort.Location = new System.Drawing.Point(15, 93);
-            this.lblPort.Name = "lblPort";
-            this.lblPort.Size = new System.Drawing.Size(40, 15);
-            this.lblPort.TabIndex = 2;
-            this.lblPort.Text = "포트:";
-            //
-            // txtIp
-            //
-            this.txtIp.Location = new System.Drawing.Point(110, 45);
-            this.txtIp.Name = "txtIp";
-            this.txtIp.Size = new System.Drawing.Size(190, 23);
-            this.txtIp.TabIndex = 1;
-            //
-            // lblIp
-            //
-            this.lblIp.AutoSize = true;
-            this.lblIp.Location = new System.Drawing.Point(15, 48);
-            this.lblIp.Name = "lblIp";
-            this.lblIp.Size = new System.Drawing.Size(40, 15);
-            this.lblIp.TabIndex = 0;
-            this.lblIp.Text = "IP:";
+            this.lblPrinter.AutoSize = true;
+            this.lblPrinter.Location = new System.Drawing.Point(15, 35);
+            this.lblPrinter.Name = "lblPrinter";
+            this.lblPrinter.Size = new System.Drawing.Size(80, 15);
+            this.lblPrinter.TabIndex = 0;
+            this.lblPrinter.Text = "프린터:";
             //
             // tabRight
             //
@@ -277,7 +246,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabRight.Location = new System.Drawing.Point(0, 0);
             this.tabRight.Name = "tabRight";
             this.tabRight.SelectedIndex = 0;
-            this.tabRight.Size = new System.Drawing.Size(756, 678);
+            this.tabRight.Size = new System.Drawing.Size(736, 678);
             this.tabRight.TabIndex = 0;
             //
             // tabPreview
@@ -286,7 +255,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabPreview.Location = new System.Drawing.Point(4, 24);
             this.tabPreview.Name = "tabPreview";
             this.tabPreview.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPreview.Size = new System.Drawing.Size(748, 650);
+            this.tabPreview.Size = new System.Drawing.Size(728, 650);
             this.tabPreview.TabIndex = 0;
             this.tabPreview.Text = "미리보기";
             this.tabPreview.UseVisualStyleBackColor = true;
@@ -297,7 +266,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.picPreview.Dock = System.Windows.Forms.DockStyle.Fill;
             this.picPreview.Location = new System.Drawing.Point(3, 3);
             this.picPreview.Name = "picPreview";
-            this.picPreview.Size = new System.Drawing.Size(742, 644);
+            this.picPreview.Size = new System.Drawing.Size(722, 644);
             this.picPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.picPreview.TabIndex = 0;
             this.picPreview.TabStop = false;
@@ -308,7 +277,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabZpl.Location = new System.Drawing.Point(4, 24);
             this.tabZpl.Name = "tabZpl";
             this.tabZpl.Padding = new System.Windows.Forms.Padding(3);
-            this.tabZpl.Size = new System.Drawing.Size(748, 650);
+            this.tabZpl.Size = new System.Drawing.Size(728, 650);
             this.tabZpl.TabIndex = 1;
             this.tabZpl.Text = "ZPL 코드";
             this.tabZpl.UseVisualStyleBackColor = true;
@@ -321,7 +290,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.txtZpl.Multiline = true;
             this.txtZpl.Name = "txtZpl";
             this.txtZpl.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtZpl.Size = new System.Drawing.Size(742, 644);
+            this.txtZpl.Size = new System.Drawing.Size(722, 644);
             this.txtZpl.TabIndex = 0;
             this.txtZpl.WordWrap = false;
             //
@@ -359,7 +328,6 @@ namespace ZebraLabelPrinter.UI.Forms
             this.grpPrinter.ResumeLayout(false);
             this.grpPrinter.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numPort)).EndInit();
             this.tabRight.ResumeLayout(false);
             this.tabPreview.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).EndInit();
@@ -376,14 +344,11 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.SplitContainer splitContainer;
         private System.Windows.Forms.Panel panelLeft;
         private System.Windows.Forms.GroupBox grpPrinter;
-        private System.Windows.Forms.TextBox txtIp;
-        private System.Windows.Forms.Label lblIp;
-        private System.Windows.Forms.NumericUpDown numPort;
-        private System.Windows.Forms.Label lblPort;
-        private System.Windows.Forms.ComboBox cmbDpi;
-        private System.Windows.Forms.Label lblDpi;
-        private System.Windows.Forms.NumericUpDown numCopies;
+        private System.Windows.Forms.Label lblPrinter;
+        private System.Windows.Forms.ComboBox cmbPrinter;
+        private System.Windows.Forms.Button btnRefreshPrinters;
         private System.Windows.Forms.Label lblCopies;
+        private System.Windows.Forms.NumericUpDown numCopies;
         private System.Windows.Forms.GroupBox grpData;
         private System.Windows.Forms.TextBox txtPartNo;
         private System.Windows.Forms.Label lblPartNo;

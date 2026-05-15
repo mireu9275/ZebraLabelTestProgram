@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.IO;
 using System.Windows.Forms;
 using ZebraLabelPrinter.Core.Builders;
@@ -27,15 +28,38 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void LoadDefaults()
         {
-            txtIp.Text = ConfigurationManager.AppSettings["DefaultPrinterIp"] ?? "192.168.1.100";
-            numPort.Value = SafeInt(ConfigurationManager.AppSettings["DefaultPrinterPort"], 9100);
-            cmbDpi.SelectedItem = ConfigurationManager.AppSettings["DefaultTargetDpi"] ?? "203";
-            if (cmbDpi.SelectedIndex < 0) cmbDpi.SelectedIndex = 0;
+            LoadInstalledPrinters();
 
             txtPartNo.Text = "PART-12345";
             txtLotNo.Text = "2605150099";
             txtQr.Text = "PART-12345|2605150099";
             numCopies.Value = 1;
+        }
+
+        private void LoadInstalledPrinters()
+        {
+            cmbPrinter.Items.Clear();
+            foreach (string name in PrinterSettings.InstalledPrinters)
+            {
+                cmbPrinter.Items.Add(name);
+            }
+
+            var configured = ConfigurationManager.AppSettings["DefaultPrinterName"];
+            if (!string.IsNullOrEmpty(configured) && cmbPrinter.Items.Contains(configured))
+            {
+                cmbPrinter.SelectedItem = configured;
+                return;
+            }
+
+            var defaultPrinter = new PrinterSettings().PrinterName;
+            if (!string.IsNullOrEmpty(defaultPrinter) && cmbPrinter.Items.Contains(defaultPrinter))
+            {
+                cmbPrinter.SelectedItem = defaultPrinter;
+            }
+            else if (cmbPrinter.Items.Count > 0)
+            {
+                cmbPrinter.SelectedIndex = 0;
+            }
         }
 
         private static int SafeInt(string s, int fallback)
@@ -56,7 +80,7 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private int CurrentTargetDpi()
         {
-            return SafeInt(cmbDpi.SelectedItem as string, 203);
+            return SafeInt(ConfigurationManager.AppSettings["DefaultTargetDpi"], _template.SourceDpi);
         }
 
         private string GenerateZpl()
@@ -71,7 +95,7 @@ namespace ZebraLabelPrinter.UI.Forms
             try
             {
                 _lastZpl = GenerateZpl();
-                txtZpl.Text = _lastZpl;
+                txtZpl.Text = ZplLabelBuilder.Format(_lastZpl);
                 tabRight.SelectedTab = tabZpl;
                 SetStatus("ZPL 생성 완료 (" + _lastZpl.Length + " bytes)");
             }
@@ -86,7 +110,7 @@ namespace ZebraLabelPrinter.UI.Forms
             try
             {
                 if (string.IsNullOrEmpty(_lastZpl)) _lastZpl = GenerateZpl();
-                txtZpl.Text = _lastZpl;
+                txtZpl.Text = ZplLabelBuilder.Format(_lastZpl);
 
                 var dpi = CurrentTargetDpi();
                 var dpmm = Math.Max(1, dpi / 25);
@@ -112,19 +136,26 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 if (string.IsNullOrEmpty(_lastZpl)) _lastZpl = GenerateZpl();
 
+                var printerName = cmbPrinter.SelectedItem as string;
+                if (string.IsNullOrEmpty(printerName))
+                {
+                    SetStatus("프린터를 선택하세요");
+                    MessageBox.Show(this, "프린터를 선택하세요", "출력 실패", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 var config = new PrinterConfig
                 {
-                    ConnectionType = PrinterConnectionType.Tcp,
-                    IpAddress = txtIp.Text,
-                    Port = (int)numPort.Value,
+                    ConnectionType = PrinterConnectionType.WindowsSpooler,
+                    SpoolerName = printerName,
                     TargetDpi = CurrentTargetDpi()
                 };
 
-                IPrinterClient client = new TcpPrinterClient();
+                IPrinterClient client = new WindowsSpoolerClient();
                 var result = client.Send(config, _lastZpl);
                 if (result.Success)
                 {
-                    SetStatus("출력 완료 — " + result.BytesSent + " bytes 전송");
+                    SetStatus("출력 완료 — " + printerName + " (" + result.BytesSent + " bytes)");
                 }
                 else
                 {
@@ -136,6 +167,12 @@ namespace ZebraLabelPrinter.UI.Forms
             {
                 ShowError("출력 처리 오류", ex);
             }
+        }
+
+        private void btnRefreshPrinters_Click(object sender, EventArgs e)
+        {
+            LoadInstalledPrinters();
+            SetStatus("프린터 목록 새로고침: " + cmbPrinter.Items.Count + "개");
         }
 
         private void SetStatus(string text)

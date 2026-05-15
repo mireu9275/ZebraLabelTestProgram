@@ -44,6 +44,12 @@ namespace ZebraLabelPrinter.Core.Builders
             return sb.ToString();
         }
 
+        public static string Format(string zpl)
+        {
+            if (string.IsNullOrEmpty(zpl)) return string.Empty;
+            return zpl.Replace("^", "\r\n^").TrimStart('\r', '\n');
+        }
+
         private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale)
         {
             var value = field.Resolve(data);
