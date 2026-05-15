@@ -54,6 +54,9 @@ namespace ZebraLabelPrinter.Core.Models
         [Category("4. 텍스트/QR"), DisplayName("폰트 높이 (dots)"), Description("텍스트 글자 높이. QR/바코드에는 사용 안 함")]
         public int FontHeight { get; set; } = 20;
 
+        [Category("4. 텍스트/QR"), DisplayName("굵기 (0-3)"), Description("ZPL ^A는 굵기 옵션이 없음. 같은 텍스트를 1픽셀씩 오프셋해서 여러 번 출력하는 overprint 방식으로 두껍게 만듦. 0=일반, 1=가벼움, 2=중간, 3=두꺼움")]
+        public int BoldStrength { get; set; }
+
         [Category("5. 데이터"), DisplayName("값 (기본)"), Description("바인딩 키가 비었거나 데이터 없을 때 이 값을 사용")]
         public string Value { get; set; }
 

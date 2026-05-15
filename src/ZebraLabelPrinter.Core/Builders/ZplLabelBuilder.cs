@@ -67,10 +67,27 @@ namespace ZebraLabelPrinter.Core.Builders
             switch (field.FieldType)
             {
                 case LabelFieldType.Text:
-                    sb.Append("^A").Append(profile.FontAlias).Append(rot).Append(',')
-                      .Append(Scale(field.FontHeight, scale)).Append(',')
-                      .Append(Scale(field.FontWidth, scale));
-                    sb.Append("^FH^FD").Append(EncodeText(value)).Append("^FS");
+                    {
+                        var fontH = Scale(field.FontHeight, scale);
+                        var fontW = Scale(field.FontWidth, scale);
+                        var enc = EncodeText(value);
+                        // 첫 출력 — ^FO는 위에서 emit됨
+                        sb.Append("^A").Append(profile.FontAlias).Append(rot).Append(',')
+                          .Append(fontH).Append(',').Append(fontW);
+                        sb.Append("^FH^FD").Append(enc).Append("^FS");
+                        // 굵기: 1픽셀씩 오프셋 overprint
+                        var offsets = new[] { (1, 0), (0, 1), (1, 1) };
+                        var bold = Math.Min(Math.Max(field.BoldStrength, 0), offsets.Length);
+                        for (int i = 0; i < bold; i++)
+                        {
+                            var dx = offsets[i].Item1;
+                            var dy = offsets[i].Item2;
+                            sb.Append("^FO").Append(x + dx).Append(',').Append(y + dy);
+                            sb.Append("^A").Append(profile.FontAlias).Append(rot).Append(',')
+                              .Append(fontH).Append(',').Append(fontW);
+                            sb.Append("^FH^FD").Append(enc).Append("^FS");
+                        }
+                    }
                     break;
 
                 case LabelFieldType.Barcode128:

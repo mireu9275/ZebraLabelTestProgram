@@ -794,6 +794,7 @@ namespace ZebraLabelPrinter.UI.Forms
             var label = "[" + field.FieldType + "] " + (field.Name ?? "");
             if (!string.IsNullOrEmpty(field.DataBindingKey)) label += " {" + field.DataBindingKey + "}";
             if (field.Rotation != LabelFieldRotation.Normal) label += " ↻" + (int)field.Rotation;
+            if (field.BoldStrength > 0) label += " B" + field.BoldStrength;
             // 라벨 폰트는 라벨 dots 좌표계 — 줌이 알아서 스케일
             var fontSizeDots = 12f;
             var textAlpha = faded ? 100 : 255;
