@@ -27,6 +27,11 @@ namespace ZebraLabelPrinter.UI.Forms
         private Point _dragStartCanvas;
         private Point _fieldStartLabel;
         private const int CanvasPadding = 10;
+        private double _canvasZoom = 1.0;
+        private const double MinZoom = 0.25;
+        private const double MaxZoom = 4.0;
+        private const int SnapGrid = 10;    // 라벨 dots 기준 스냅 단위
+        private bool _suppressLabelSizeHandler;
 
         public MainForm()
         {
@@ -40,11 +45,74 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void InitializeDesigner()
         {
-            // 캔버스 크기 = 라벨 dots + padding (1:1 스케일)
-            pnlCanvas.Size = new System.Drawing.Size(
-                _template.WidthDots + CanvasPadding * 2,
-                _template.HeightDots + CanvasPadding * 2);
+            ResizeCanvasToLabel();
             pgFieldProps.SelectedObject = null;
+
+            // 키보드 처리 (Delete 등) + 휠 줌
+            pnlCanvas.TabStop = true;
+            pnlCanvas.MouseWheel += new MouseEventHandler(pnlCanvas_MouseWheel);
+            this.KeyPreview = true;
+            this.KeyDown += new KeyEventHandler(MainForm_KeyDown);
+
+            // 라벨 크기 입력 초기화 (mm 기본)
+            _suppressLabelSizeHandler = true;
+            try
+            {
+                cmbLabelUnit.SelectedItem = "mm";
+                if (cmbLabelUnit.SelectedIndex < 0) cmbLabelUnit.SelectedIndex = 0;
+                numLabelWidth.Value = (decimal)DotsToUnit(_template.WidthDots);
+                numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
+            }
+            finally { _suppressLabelSizeHandler = false; }
+        }
+
+        private void ResizeCanvasToLabel()
+        {
+            var w = (int)Math.Round(_template.WidthDots * _canvasZoom) + CanvasPadding * 2;
+            var h = (int)Math.Round(_template.HeightDots * _canvasZoom) + CanvasPadding * 2;
+            pnlCanvas.Size = new Size(w, h);
+        }
+
+        private double MmPerDot()
+        {
+            // dpi = dots per inch, 1 inch = 25.4 mm → mm/dot = 25.4 / dpi
+            return 25.4 / Math.Max(1, _template.SourceDpi);
+        }
+
+        private double DotsToUnit(int dots)
+        {
+            var mm = dots * MmPerDot();
+            return (cmbLabelUnit?.SelectedItem as string) == "cm" ? mm / 10.0 : mm;
+        }
+
+        private int UnitToDots(decimal value)
+        {
+            var mm = (double)value;
+            if ((cmbLabelUnit?.SelectedItem as string) == "cm") mm *= 10.0;
+            return (int)Math.Round(mm / MmPerDot());
+        }
+
+        private void OnLabelSizeChanged(object sender, EventArgs e)
+        {
+            if (_suppressLabelSizeHandler) return;
+            _template.WidthDots = UnitToDots(numLabelWidth.Value);
+            _template.HeightDots = UnitToDots(numLabelHeight.Value);
+            ResizeCanvasToLabel();
+            pnlCanvas.Invalidate();
+            RegenerateZplFromTemplate();
+        }
+
+        private void OnLabelUnitChanged(object sender, EventArgs e)
+        {
+            if (_suppressLabelSizeHandler) return;
+            // 단위 변경 시 dots는 그대로, NumericUpDown 표시값만 단위에 맞춰 다시 채움
+            _suppressLabelSizeHandler = true;
+            try
+            {
+                numLabelWidth.Value = (decimal)DotsToUnit(_template.WidthDots);
+                numLabelHeight.Value = (decimal)DotsToUnit(_template.HeightDots);
+            }
+            finally { _suppressLabelSizeHandler = false; }
         }
 
         private void LoadDefaults()
@@ -268,6 +336,7 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private Rectangle FieldRect(LabelField f)
         {
+            // 라벨 dots 좌표계 기준 (transform이 줌/패딩 처리)
             int w, h;
             switch (f.FieldType)
             {
@@ -291,17 +360,44 @@ namespace ZebraLabelPrinter.UI.Forms
                 default:
                     w = h = 40; break;
             }
-            return new Rectangle(f.X + CanvasPadding, f.Y + CanvasPadding, w, h);
+            return new Rectangle(f.X, f.Y, w, h);
+        }
+
+        private Point CanvasToLabel(Point canvasPt)
+        {
+            return new Point(
+                (int)Math.Round((canvasPt.X - CanvasPadding) / _canvasZoom),
+                (int)Math.Round((canvasPt.Y - CanvasPadding) / _canvasZoom));
+        }
+
+        private static int SnapToGrid(int value, bool snap)
+        {
+            if (!snap) return value;
+            return ((value + SnapGrid / 2) / SnapGrid) * SnapGrid;
         }
 
         private void pnlCanvas_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            var labelRect = new Rectangle(CanvasPadding, CanvasPadding, _template.WidthDots, _template.HeightDots);
+            // 그래픽스에 줌 + 패딩 transform 적용 → 이후 좌표는 라벨 dots 기준
+            g.TranslateTransform(CanvasPadding, CanvasPadding);
+            g.ScaleTransform((float)_canvasZoom, (float)_canvasZoom);
+
+            var labelRect = new Rectangle(0, 0, _template.WidthDots, _template.HeightDots);
 
             using (var bg = new SolidBrush(Color.White))
                 g.FillRectangle(bg, labelRect);
-            using (var border = new Pen(Color.Black, 1))
+
+            // 스냅 그리드 표시 (옅게)
+            using (var grid = new Pen(Color.FromArgb(40, Color.Gray), 1f))
+            {
+                for (int x = SnapGrid; x < _template.WidthDots; x += SnapGrid)
+                    g.DrawLine(grid, x, 0, x, _template.HeightDots);
+                for (int y = SnapGrid; y < _template.HeightDots; y += SnapGrid)
+                    g.DrawLine(grid, 0, y, _template.WidthDots, y);
+            }
+
+            using (var border = new Pen(Color.Black, 1f / (float)_canvasZoom))
                 g.DrawRectangle(border, labelRect);
 
             if (_template.Fields == null) return;
@@ -316,24 +412,29 @@ namespace ZebraLabelPrinter.UI.Forms
             var r = FieldRect(field);
             using (var fill = new SolidBrush(Color.FromArgb(40, selected ? Color.DodgerBlue : Color.Gray)))
                 g.FillRectangle(fill, r);
-            using (var pen = new Pen(selected ? Color.DodgerBlue : Color.DimGray, selected ? 2f : 1f))
+            // 펜 굵기는 줌과 무관하게 화면 픽셀로 일정
+            var penWidth = (selected ? 2f : 1f) / (float)_canvasZoom;
+            using (var pen = new Pen(selected ? Color.DodgerBlue : Color.DimGray, penWidth))
             {
                 if (!selected) pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                 g.DrawRectangle(pen, r);
             }
             var label = "[" + field.FieldType + "] " + (field.Name ?? "");
             if (!string.IsNullOrEmpty(field.DataBindingKey)) label += " {" + field.DataBindingKey + "}";
+            // 라벨 폰트는 라벨 dots 좌표계 — 줌이 알아서 스케일
+            var fontSizeDots = 12f;
             using (var fontBrush = new SolidBrush(Color.Black))
-            using (var labelFont = new Font("Segoe UI", 8f))
+            using (var labelFont = new Font("Segoe UI", fontSizeDots, GraphicsUnit.Pixel))
                 g.DrawString(label, labelFont, fontBrush, r.X + 2, r.Y + 2);
         }
 
         private LabelField HitTest(Point canvasPoint)
         {
+            var labelPt = CanvasToLabel(canvasPoint);
             // 위에 그려진 필드(나중에 추가된) 우선
             for (int i = _template.Fields.Count - 1; i >= 0; i--)
             {
-                if (FieldRect(_template.Fields[i]).Contains(canvasPoint))
+                if (FieldRect(_template.Fields[i]).Contains(labelPt))
                     return _template.Fields[i];
             }
             return null;
@@ -341,6 +442,7 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void pnlCanvas_MouseDown(object sender, MouseEventArgs e)
         {
+            pnlCanvas.Focus();
             if (e.Button != MouseButtons.Left) return;
             var hit = HitTest(e.Location);
             SelectField(hit);
@@ -355,10 +457,15 @@ namespace ZebraLabelPrinter.UI.Forms
         private void pnlCanvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_isDragging || _selectedField == null) return;
-            var dx = e.X - _dragStartCanvas.X;
-            var dy = e.Y - _dragStartCanvas.Y;
-            _selectedField.X = Math.Max(0, _fieldStartLabel.X + dx);
-            _selectedField.Y = Math.Max(0, _fieldStartLabel.Y + dy);
+            // 화면 픽셀 이동량을 라벨 dots로 환산
+            var dxDots = (int)Math.Round((e.X - _dragStartCanvas.X) / _canvasZoom);
+            var dyDots = (int)Math.Round((e.Y - _dragStartCanvas.Y) / _canvasZoom);
+            var newX = Math.Max(0, _fieldStartLabel.X + dxDots);
+            var newY = Math.Max(0, _fieldStartLabel.Y + dyDots);
+            // Shift 누르면 스냅 해제, 기본은 스냅 ON
+            var snap = (Control.ModifierKeys & Keys.Shift) != Keys.Shift;
+            _selectedField.X = SnapToGrid(newX, snap);
+            _selectedField.Y = SnapToGrid(newY, snap);
             pnlCanvas.Invalidate();
             pgFieldProps.Refresh();
         }
@@ -368,6 +475,45 @@ namespace ZebraLabelPrinter.UI.Forms
             if (!_isDragging) return;
             _isDragging = false;
             RegenerateZplFromTemplate();
+        }
+
+        private void pnlCanvas_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if ((Control.ModifierKeys & Keys.Control) != Keys.Control) return;
+            var factor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
+            var newZoom = Math.Min(MaxZoom, Math.Max(MinZoom, _canvasZoom * factor));
+            if (Math.Abs(newZoom - _canvasZoom) < 1e-6) return;
+            _canvasZoom = newZoom;
+            ResizeCanvasToLabel();
+            pnlCanvas.Invalidate();
+            SetStatus("캔버스 줌: " + (_canvasZoom * 100).ToString("0") + "%");
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 디자이너 탭에서만 키 처리
+            if (tabRight.SelectedTab != tabDesigner) return;
+
+            if (e.KeyCode == Keys.Delete && _selectedField != null)
+            {
+                btnDeleteField_Click(sender, EventArgs.Empty);
+                e.Handled = true;
+                return;
+            }
+
+            // 화살표로 1 dot씩 미세 조정 (Shift+화살표는 10 dots)
+            if (_selectedField != null && (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Up || e.KeyCode == Keys.Down))
+            {
+                var step = (e.Modifiers & Keys.Shift) == Keys.Shift ? SnapGrid : 1;
+                if (e.KeyCode == Keys.Left) _selectedField.X = Math.Max(0, _selectedField.X - step);
+                if (e.KeyCode == Keys.Right) _selectedField.X += step;
+                if (e.KeyCode == Keys.Up) _selectedField.Y = Math.Max(0, _selectedField.Y - step);
+                if (e.KeyCode == Keys.Down) _selectedField.Y += step;
+                pnlCanvas.Invalidate();
+                pgFieldProps.Refresh();
+                RegenerateZplFromTemplate();
+                e.Handled = true;
+            }
         }
 
         private void SelectField(LabelField field)
