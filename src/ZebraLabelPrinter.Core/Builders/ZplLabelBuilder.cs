@@ -52,7 +52,15 @@ namespace ZebraLabelPrinter.Core.Builders
         public static string Format(string zpl)
         {
             if (string.IsNullOrEmpty(zpl)) return string.Empty;
-            return zpl.Replace("^", "\r\n^").TrimStart('\r', '\n');
+            // 필드 단위로 한 줄: ^FS(끝) 뒤 + ^FO(시작) 앞에서 줄바꿈. ^XA/^XZ는 별도 줄.
+            var s = zpl;
+            s = s.Replace("^XA", "^XA\r\n");
+            s = s.Replace("^FS", "^FS\r\n");
+            s = s.Replace("^FO", "\r\n^FO");
+            s = s.Replace("^XZ", "\r\n^XZ");
+            // 중복 줄바꿈 정리
+            while (s.Contains("\r\n\r\n")) s = s.Replace("\r\n\r\n", "\r\n");
+            return s.Trim();
         }
 
         private static void AppendField(StringBuilder sb, LabelField field, IDictionary<string, string> data, double scale, KoreanFontProfile profile)
