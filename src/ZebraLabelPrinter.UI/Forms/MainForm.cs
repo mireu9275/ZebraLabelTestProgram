@@ -1520,6 +1520,47 @@ namespace ZebraLabelPrinter.UI.Forms
             }
         }
 
+        private void btnZplToDesigner_Click(object sender, EventArgs e)
+        {
+            var zpl = txtZpl.Text;
+            if (string.IsNullOrWhiteSpace(zpl)) { SetStatus("변환할 ZPL이 비어있음"); return; }
+
+            if (_template.Fields.Count > 0)
+            {
+                var r = MessageBox.Show(this,
+                    "현재 디자인을 ZPL 파싱 결과로 대체할까요?\n(실행 취소 Ctrl+Z 로 되돌릴 수 있음)",
+                    "ZPL → 디자이너", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (r != DialogResult.Yes) return;
+            }
+
+            try
+            {
+                var parsed = ZplParser.Parse(zpl);
+                _template = parsed;
+                SelectField(null);
+                ResizeCanvasToLabel();
+                _suppressLabelSizeHandler = true;
+                try
+                {
+                    cmbSizePreset.SelectedIndex = 0;
+                    numLabelWidth.Value = ClampNum(numLabelWidth, (decimal)DotsToUnit(_template.WidthDots));
+                    numLabelHeight.Value = ClampNum(numLabelHeight, (decimal)DotsToUnit(_template.HeightDots));
+                    numCopies.Value = Math.Max(1, _template.Copies);
+                }
+                finally { _suppressLabelSizeHandler = false; }
+                RebuildDataBindings();
+                RegenerateZplFromTemplate();
+                pnlCanvas.Invalidate();
+                MarkDirty();
+                tabRight.SelectedTab = tabDesigner;
+                SetStatus("ZPL 파싱 완료 — 필드 " + _template.Fields.Count + "개 생성");
+            }
+            catch (Exception ex)
+            {
+                ShowError("ZPL 파싱 실패", ex);
+            }
+        }
+
         private void btnExportCode_Click(object sender, EventArgs e)
         {
             using (var dlg = new CodeExportForm(_template))

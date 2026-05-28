@@ -45,6 +45,8 @@ namespace ZebraLabelPrinter.UI.Forms
             this.picPreview = new System.Windows.Forms.PictureBox();
             this.tabZpl = new System.Windows.Forms.TabPage();
             this.txtZpl = new System.Windows.Forms.TextBox();
+            this.toolStripZpl = new System.Windows.Forms.ToolStrip();
+            this.btnZplToDesigner = new System.Windows.Forms.ToolStripButton();
             this.tabDesigner = new System.Windows.Forms.TabPage();
             this.splitDesigner = new System.Windows.Forms.SplitContainer();
             this.pnlCanvas = new System.Windows.Forms.Panel();
@@ -85,6 +87,7 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabPreview.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
             this.tabZpl.SuspendLayout();
+            this.toolStripZpl.SuspendLayout();
             this.tabDesigner.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitDesigner)).BeginInit();
             this.splitDesigner.Panel1.SuspendLayout();
@@ -389,6 +392,7 @@ namespace ZebraLabelPrinter.UI.Forms
             // tabZpl
             //
             this.tabZpl.Controls.Add(this.txtZpl);
+            this.tabZpl.Controls.Add(this.toolStripZpl);
             this.tabZpl.Location = new System.Drawing.Point(4, 24);
             this.tabZpl.Name = "tabZpl";
             this.tabZpl.Padding = new System.Windows.Forms.Padding(3);
@@ -396,6 +400,23 @@ namespace ZebraLabelPrinter.UI.Forms
             this.tabZpl.TabIndex = 1;
             this.tabZpl.Text = "ZPL 코드";
             this.tabZpl.UseVisualStyleBackColor = true;
+            //
+            // toolStripZpl
+            //
+            this.toolStripZpl.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { this.btnZplToDesigner });
+            this.toolStripZpl.Location = new System.Drawing.Point(3, 3);
+            this.toolStripZpl.Name = "toolStripZpl";
+            this.toolStripZpl.Size = new System.Drawing.Size(722, 25);
+            this.toolStripZpl.TabIndex = 1;
+            //
+            // btnZplToDesigner
+            //
+            this.btnZplToDesigner.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnZplToDesigner.Name = "btnZplToDesigner";
+            this.btnZplToDesigner.Size = new System.Drawing.Size(140, 22);
+            this.btnZplToDesigner.Text = "▶ 디자이너로 변환 (ZPL 파싱)";
+            this.btnZplToDesigner.ToolTipText = "위 ZPL 코드를 파싱해서 디자이너에 필드로 불러옴 (현재 디자인 대체)";
+            this.btnZplToDesigner.Click += new System.EventHandler(this.btnZplToDesigner_Click);
             //
             // txtZpl
             //
@@ -654,6 +675,8 @@ namespace ZebraLabelPrinter.UI.Forms
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).EndInit();
             this.tabZpl.ResumeLayout(false);
             this.tabZpl.PerformLayout();
+            this.toolStripZpl.ResumeLayout(false);
+            this.toolStripZpl.PerformLayout();
             this.tabDesigner.ResumeLayout(false);
             this.tabDesigner.PerformLayout();
             this.splitDesigner.Panel1.ResumeLayout(false);
@@ -698,6 +721,8 @@ namespace ZebraLabelPrinter.UI.Forms
         private System.Windows.Forms.PictureBox picPreview;
         private System.Windows.Forms.TabPage tabZpl;
         private System.Windows.Forms.TextBox txtZpl;
+        private System.Windows.Forms.ToolStrip toolStripZpl;
+        private System.Windows.Forms.ToolStripButton btnZplToDesigner;
         private System.Windows.Forms.TabPage tabDesigner;
         private System.Windows.Forms.ToolStrip toolStripDesigner;
         private System.Windows.Forms.ToolStripButton btnAddText;

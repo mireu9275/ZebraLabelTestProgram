@@ -56,6 +56,7 @@
     <Compile Include="Printing\SheetPrintService.cs" />
     <Compile Include="Builders\ZplLabelBuilder.cs" />
     <Compile Include="Builders\ZplImageEncoder.cs" />
+    <Compile Include="Builders\ZplParser.cs" />
     <Compile Include="Printing\IPrinterClient.cs" />
     <Compile Include="Printing\TcpPrinterClient.cs" />
     <Compile Include="Printing\WindowsSpoolerClient.cs" />
