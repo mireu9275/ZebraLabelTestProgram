@@ -1395,26 +1395,33 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void btnRotate_Click(object sender, EventArgs e)
         {
-            if (_selectedField == null) { SetStatus("회전할 필드를 선택하세요"); return; }
             RotateSelectedField();
         }
 
         private void RotateSelectedField()
         {
-            if (_selectedField == null) return;
-            // Normal → 90 → 180 → 270 → Normal 순환
-            switch (_selectedField.Rotation)
+            if (_selectedFields.Count == 0) { SetStatus("회전할 필드를 선택하세요"); return; }
+            // 선택된 모든 필드를 각자 한 단계씩 회전 (Normal → 90 → 180 → 270 → Normal)
+            foreach (var f in _selectedFields)
             {
-                case LabelFieldRotation.Normal: _selectedField.Rotation = LabelFieldRotation.Rotate90; break;
-                case LabelFieldRotation.Rotate90: _selectedField.Rotation = LabelFieldRotation.Rotate180; break;
-                case LabelFieldRotation.Rotate180: _selectedField.Rotation = LabelFieldRotation.Rotate270; break;
-                default: _selectedField.Rotation = LabelFieldRotation.Normal; break;
+                f.Rotation = NextRotation(f.Rotation);
             }
             pgFieldProps.Refresh();
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
             MarkDirty();
-            SetStatus("회전: " + _selectedField.Name + " → " + _selectedField.Rotation);
+            SetStatus(_selectedFields.Count + "개 회전");
+        }
+
+        private static LabelFieldRotation NextRotation(LabelFieldRotation r)
+        {
+            switch (r)
+            {
+                case LabelFieldRotation.Normal: return LabelFieldRotation.Rotate90;
+                case LabelFieldRotation.Rotate90: return LabelFieldRotation.Rotate180;
+                case LabelFieldRotation.Rotate180: return LabelFieldRotation.Rotate270;
+                default: return LabelFieldRotation.Normal;
+            }
         }
 
         private void btnClearAll_Click(object sender, EventArgs e)
@@ -1581,24 +1588,30 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void btnBringToFront_Click(object sender, EventArgs e)
         {
-            if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
-            _template.Fields.Remove(_selectedField);
-            _template.Fields.Add(_selectedField);
+            if (_selectedFields.Count == 0) { SetStatus("선택 후 사용"); return; }
+            // 템플릿 등장 순서대로 처리하여 선택 필드 간 상대 순서 유지
+            var ordered = _template.Fields.Where(f => _selectedFields.Contains(f)).ToList();
+            foreach (var f in ordered) { _template.Fields.Remove(f); _template.Fields.Add(f); }
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
             MarkDirty();
-            SetStatus("맨 위로 이동: " + _selectedField.Name);
+            SetStatus("맨 위로 이동: " + ordered.Count + "개");
         }
 
         private void btnSendToBack_Click(object sender, EventArgs e)
         {
-            if (_selectedField == null) { SetStatus("선택 후 사용"); return; }
-            _template.Fields.Remove(_selectedField);
-            _template.Fields.Insert(0, _selectedField);
+            if (_selectedFields.Count == 0) { SetStatus("선택 후 사용"); return; }
+            var ordered = _template.Fields.Where(f => _selectedFields.Contains(f)).ToList();
+            // 역순으로 0번에 insert → 원래 상대 순서 유지하며 맨 앞으로
+            for (int i = ordered.Count - 1; i >= 0; i--)
+            {
+                _template.Fields.Remove(ordered[i]);
+                _template.Fields.Insert(0, ordered[i]);
+            }
             pnlCanvas.Invalidate();
             RegenerateZplFromTemplate();
             MarkDirty();
-            SetStatus("맨 뒤로 이동: " + _selectedField.Name);
+            SetStatus("맨 뒤로 이동: " + ordered.Count + "개");
         }
 
         private void pnlCanvas_MouseWheel(object sender, MouseEventArgs e)
