@@ -26,12 +26,26 @@ namespace ZebraLabelPrinter.UI.Forms
         private string _currentFilePath;
 
         // Designer state
-        private LabelField _selectedField;
+        private LabelField _selectedField;                                          // primary 선택 (PropertyGrid 포커스)
+        private readonly HashSet<LabelField> _selectedFields = new HashSet<LabelField>(); // 다중 선택
         private bool _isDragging;
         private Point _dragStartCanvas;
         private DragMode _dragMode = DragMode.None;
         private Rectangle _resizeStartRect; // 리사이즈 시작 시점의 필드 사각형 (X,Y,W,H 모두)
         private Rectangle _ghostRect;       // 드래그 중 ghost 사각형 (이동: X/Y 변, 리사이즈: 모두 변)
+        // 다중 이동을 위한 시작 좌표 스냅샷
+        private readonly Dictionary<LabelField, Point> _multiDragStart = new Dictionary<LabelField, Point>();
+        // 드래그-영역-선택 (rubber band)
+        private bool _isRubberBand;
+        private Point _rubberStartLabel;
+        private Rectangle _rubberRect;
+        // 클립보드 (XML 직렬화)
+        private string _clipboardXml;
+        // Undo/Redo 히스토리 (XML 스냅샷)
+        private readonly List<string> _historyStates = new List<string>();
+        private int _historyIndex = -1;
+        private const int MaxHistory = 100;
+        private bool _suppressHistoryPush;
 
         private enum DragMode
         {
@@ -62,6 +76,7 @@ namespace ZebraLabelPrinter.UI.Forms
             RebuildDataBindings();
             RegenerateZplFromTemplate();
             UpdateTitle(); // 시작 시 "(이름 없음)"으로 타이틀 설정
+            PushHistory(); // 초기 상태를 히스토리에 등록 (이후 Undo의 마지막 도착지)
         }
 
         private void InitializeDesigner()
@@ -559,9 +574,167 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void MarkDirty()
         {
-            if (_isDirty) return;
-            _isDirty = true;
-            UpdateTitle();
+            if (!_isDirty)
+            {
+                _isDirty = true;
+                UpdateTitle();
+            }
+            PushHistory();
+        }
+
+        // ========== Undo/Redo ==========
+
+        private void PushHistory()
+        {
+            if (_suppressHistoryPush) return;
+            try
+            {
+                var serialized = SerializeTemplate(_template);
+                // 같은 상태 중복 추가 방지
+                if (_historyIndex >= 0 && _historyIndex < _historyStates.Count && _historyStates[_historyIndex] == serialized) return;
+                // 현재 위치 이후 redo 기록은 새로운 분기로 덮어쓰여짐
+                if (_historyIndex < _historyStates.Count - 1)
+                    _historyStates.RemoveRange(_historyIndex + 1, _historyStates.Count - _historyIndex - 1);
+                _historyStates.Add(serialized);
+                _historyIndex++;
+                if (_historyStates.Count > MaxHistory)
+                {
+                    _historyStates.RemoveAt(0);
+                    _historyIndex--;
+                }
+            }
+            catch { /* 직렬화 실패는 무시 */ }
+        }
+
+        private void Undo()
+        {
+            if (_historyIndex <= 0) { SetStatus("실행 취소할 작업 없음"); return; }
+            _historyIndex--;
+            RestoreTemplateFromHistory(_historyStates[_historyIndex]);
+            SetStatus("실행 취소 (" + (_historyIndex + 1) + "/" + _historyStates.Count + ")");
+        }
+
+        private void Redo()
+        {
+            if (_historyIndex >= _historyStates.Count - 1) { SetStatus("다시 실행할 작업 없음"); return; }
+            _historyIndex++;
+            RestoreTemplateFromHistory(_historyStates[_historyIndex]);
+            SetStatus("다시 실행 (" + (_historyIndex + 1) + "/" + _historyStates.Count + ")");
+        }
+
+        private void RestoreTemplateFromHistory(string xml)
+        {
+            _suppressHistoryPush = true;
+            try
+            {
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
+                using (var sr = new System.IO.StringReader(xml))
+                {
+                    var t = (LabelTemplate)serializer.Deserialize(sr);
+                    if (t.Fields == null) t.Fields = new List<LabelField>();
+                    _template = t;
+                }
+                // 객체 ref가 새로 만들어졌으므로 선택 초기화
+                _selectedFields.Clear();
+                _selectedField = null;
+                pgFieldProps.SelectedObject = null;
+                ResizeCanvasToLabel();
+                // 라벨 크기 입력 동기화
+                _suppressLabelSizeHandler = true;
+                try
+                {
+                    numLabelWidth.Value = ClampNum(numLabelWidth, (decimal)DotsToUnit(_template.WidthDots));
+                    numLabelHeight.Value = ClampNum(numLabelHeight, (decimal)DotsToUnit(_template.HeightDots));
+                    numCopies.Value = Math.Max(1, _template.Copies);
+                }
+                finally { _suppressLabelSizeHandler = false; }
+                RebuildDataBindings();
+                RegenerateZplFromTemplate();
+                pnlCanvas.Invalidate();
+            }
+            finally { _suppressHistoryPush = false; }
+            if (_isDirty == false) { _isDirty = true; UpdateTitle(); }
+        }
+
+        private static string SerializeTemplate(LabelTemplate t)
+        {
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(LabelTemplate));
+            using (var sw = new System.IO.StringWriter())
+            {
+                serializer.Serialize(sw, t);
+                return sw.ToString();
+            }
+        }
+
+        // ========== Copy/Paste ==========
+
+        private void CopySelected()
+        {
+            if (_selectedFields.Count == 0) { SetStatus("복사할 필드 선택"); return; }
+            try
+            {
+                var list = _selectedFields.ToList();
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(List<LabelField>));
+                using (var sw = new System.IO.StringWriter())
+                {
+                    serializer.Serialize(sw, list);
+                    _clipboardXml = sw.ToString();
+                }
+                SetStatus("복사: " + list.Count + "개 필드");
+            }
+            catch (Exception ex)
+            {
+                SetStatus("복사 실패: " + ex.Message);
+            }
+        }
+
+        private void Paste()
+        {
+            if (string.IsNullOrEmpty(_clipboardXml)) { SetStatus("클립보드가 비어있음"); return; }
+            try
+            {
+                var serializer = new System.Xml.Serialization.XmlSerializer(typeof(List<LabelField>));
+                List<LabelField> pasted;
+                using (var sr = new System.IO.StringReader(_clipboardXml))
+                {
+                    pasted = (List<LabelField>)serializer.Deserialize(sr);
+                }
+                if (pasted == null || pasted.Count == 0) return;
+
+                _selectedFields.Clear();
+                foreach (var f in pasted)
+                {
+                    f.Name = MakeUniqueName(f.Name ?? "Pasted");
+                    f.X += 10;
+                    f.Y += 10;
+                    if (f.FieldType != LabelFieldType.Box && f.FieldType != LabelFieldType.Line)
+                        f.DataBindingKey = f.Name;
+                    _template.Fields.Add(f);
+                    _selectedFields.Add(f);
+                }
+                _selectedField = pasted.Last();
+                pgFieldProps.SelectedObject = _selectedField;
+                RebuildDataBindings();
+                RegenerateZplFromTemplate();
+                MarkDirty();
+                pnlCanvas.Invalidate();
+                SetStatus("붙여넣기: " + pasted.Count + "개");
+            }
+            catch (Exception ex)
+            {
+                SetStatus("붙여넣기 실패: " + ex.Message);
+            }
+        }
+
+        private string MakeUniqueName(string baseName)
+        {
+            if (!_template.Fields.Any(f => f.Name == baseName)) return baseName;
+            for (int i = 2; i < 10000; i++)
+            {
+                var candidate = baseName + "_" + i;
+                if (!_template.Fields.Any(f => f.Name == candidate)) return candidate;
+            }
+            return baseName + "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
         }
 
         private void ClearDirty()
@@ -731,15 +904,51 @@ namespace ZebraLabelPrinter.UI.Forms
             if (_template.Fields == null) return;
             foreach (var field in _template.Fields)
             {
-                // 드래그 중인 선택 필드는 원본 위치에 옅게 + ghost는 별도로 그림 (아래에서)
-                var isDraggingThis = _isDragging && ReferenceEquals(field, _selectedField);
-                DrawField(g, field, ReferenceEquals(field, _selectedField), faded: isDraggingThis);
+                // 드래그 중이면 다중 선택된 모두 옅게 (원본 잔영), ghost는 별도
+                var isInSelection = _selectedFields.Contains(field);
+                var isDraggingThis = _isDragging && isInSelection;
+                DrawField(g, field, isInSelection, faded: isDraggingThis);
             }
 
-            // 선택된 박스에 리사이즈 핸들 표시 (드래그 안 할 때만, 드래그 중이면 ghost 핸들이 대신)
-            if (!_isDragging && _selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
+            // 선택된 박스에 리사이즈 핸들 표시 (단일 선택일 때만)
+            if (!_isDragging && _selectedFields.Count == 1 && _selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
             {
                 DrawResizeHandles(g, FieldRect(_selectedField));
+            }
+
+            // Rubber band 사각형
+            if (_isRubberBand && _rubberRect.Width > 0 && _rubberRect.Height > 0)
+            {
+                using (var rbFill = new SolidBrush(Color.FromArgb(40, Color.DodgerBlue)))
+                    g.FillRectangle(rbFill, _rubberRect);
+                using (var rbPen = new Pen(Color.DodgerBlue, 1f / (float)_canvasZoom))
+                {
+                    rbPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    g.DrawRectangle(rbPen, _rubberRect);
+                }
+            }
+
+            // 다중 이동 ghost — Move 모드이고 _multiDragStart에 여러 개일 때 각 필드별 ghost 표시
+            if (_isDragging && _dragMode == DragMode.Move && _multiDragStart.Count > 1 && _selectedField != null)
+            {
+                var anchorStart = _multiDragStart.ContainsKey(_selectedField)
+                    ? _multiDragStart[_selectedField]
+                    : new Point(_selectedField.X, _selectedField.Y);
+                var dx = _ghostRect.X - anchorStart.X;
+                var dy = _ghostRect.Y - anchorStart.Y;
+                using (var ghostFill = new SolidBrush(Color.FromArgb(30, Color.DodgerBlue)))
+                using (var ghostPen = new Pen(Color.DodgerBlue, 1.5f / (float)_canvasZoom))
+                {
+                    ghostPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    foreach (var kv in _multiDragStart)
+                    {
+                        var origRect = FieldRect(kv.Key);
+                        var ghostR = new Rectangle(kv.Value.X + dx, kv.Value.Y + dy, origRect.Width, origRect.Height);
+                        g.FillRectangle(ghostFill, ghostR);
+                        g.DrawRectangle(ghostPen, ghostR);
+                    }
+                }
+                return;
             }
 
             // 드래그 중이면 ghost(목적지/새 크기 미리보기) + 좌표 floating 라벨
@@ -889,8 +1098,8 @@ namespace ZebraLabelPrinter.UI.Forms
             pnlCanvas.Focus();
             if (e.Button != MouseButtons.Left) return;
 
-            // 1) 선택된 박스의 리사이즈 핸들 hit test 먼저
-            if (_selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
+            // 1) 선택된 박스의 리사이즈 핸들 hit test 먼저 (단일 선택 시만)
+            if (_selectedFields.Count == 1 && _selectedField != null && _selectedField.FieldType == LabelFieldType.Box)
             {
                 var handleMode = HitTestHandle(e.Location, _selectedField);
                 if (handleMode != DragMode.None)
@@ -904,16 +1113,48 @@ namespace ZebraLabelPrinter.UI.Forms
                 }
             }
 
-            // 2) 일반 필드 hit (이동)
+            // 2) 일반 필드 hit
             var hit = HitTest(e.Location);
-            SelectField(hit);
+            var ctrl = (Control.ModifierKeys & Keys.Control) == Keys.Control;
+            var shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+
             if (hit != null)
             {
+                if (ctrl)
+                {
+                    // Ctrl+클릭: 선택 토글
+                    ToggleSelectField(hit);
+                    return;
+                }
+                // 이미 다중선택 안에 포함된 필드 클릭 → 다중 드래그
+                if (_selectedFields.Contains(hit) && _selectedFields.Count > 1)
+                {
+                    _dragMode = DragMode.Move;
+                    _isDragging = true;
+                    _dragStartCanvas = e.Location;
+                    _resizeStartRect = FieldRect(hit);
+                    _ghostRect = _resizeStartRect;
+                    _multiDragStart.Clear();
+                    foreach (var f in _selectedFields) _multiDragStart[f] = new Point(f.X, f.Y);
+                    return;
+                }
+                // 일반 클릭: 단일 선택 후 이동 준비
+                SelectField(hit);
                 _dragMode = DragMode.Move;
                 _isDragging = true;
                 _dragStartCanvas = e.Location;
                 _resizeStartRect = FieldRect(hit);
                 _ghostRect = _resizeStartRect;
+                _multiDragStart.Clear();
+                _multiDragStart[hit] = new Point(hit.X, hit.Y);
+            }
+            else
+            {
+                // 빈 영역 클릭 → rubber band 시작 (Shift/Ctrl이면 기존 선택 유지)
+                if (!ctrl && !shift) SelectField(null);
+                _isRubberBand = true;
+                _rubberStartLabel = CanvasToLabel(e.Location);
+                _rubberRect = new Rectangle(_rubberStartLabel.X, _rubberStartLabel.Y, 0, 0);
             }
         }
 
@@ -925,6 +1166,19 @@ namespace ZebraLabelPrinter.UI.Forms
             var mmY = labelPt.Y * MmPerDot();
             SetStatus(string.Format("커서: X={0}dot ({1:F1}mm), Y={2}dot ({3:F1}mm)", labelPt.X, mmX, labelPt.Y, mmY)
                      + (_selectedField != null ? "  |  선택: " + _selectedField.Name : ""));
+
+            // Rubber band 갱신
+            if (_isRubberBand)
+            {
+                var cur = CanvasToLabel(e.Location);
+                _rubberRect = new Rectangle(
+                    Math.Min(_rubberStartLabel.X, cur.X),
+                    Math.Min(_rubberStartLabel.Y, cur.Y),
+                    Math.Abs(cur.X - _rubberStartLabel.X),
+                    Math.Abs(cur.Y - _rubberStartLabel.Y));
+                pnlCanvas.Invalidate();
+                return;
+            }
 
             if (!_isDragging)
             {
@@ -944,6 +1198,21 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void pnlCanvas_MouseUp(object sender, MouseEventArgs e)
         {
+            // Rubber band 완료
+            if (_isRubberBand)
+            {
+                _isRubberBand = false;
+                if (_rubberRect.Width >= 3 && _rubberRect.Height >= 3)
+                {
+                    var inRect = _template.Fields.Where(f => FieldRect(f).IntersectsWith(_rubberRect)).ToList();
+                    var additive = (Control.ModifierKeys & (Keys.Control | Keys.Shift)) != Keys.None;
+                    SelectMultiple(inRect, additive);
+                }
+                _rubberRect = Rectangle.Empty;
+                pnlCanvas.Invalidate();
+                return;
+            }
+
             if (!_isDragging) return;
             _isDragging = false;
             var mode = _dragMode;
@@ -956,13 +1225,35 @@ namespace ZebraLabelPrinter.UI.Forms
             }
 
             var changed = false;
-            if (_ghostRect.X != _selectedField.X) { _selectedField.X = _ghostRect.X; changed = true; }
-            if (_ghostRect.Y != _selectedField.Y) { _selectedField.Y = _ghostRect.Y; changed = true; }
-            if (mode != DragMode.Move && _selectedField.FieldType == LabelFieldType.Box)
+            // 다중 이동 (Move 모드이고 _multiDragStart에 여러 개)
+            if (mode == DragMode.Move && _multiDragStart.Count > 1)
             {
-                if (_ghostRect.Width != _selectedField.Width) { _selectedField.Width = _ghostRect.Width; changed = true; }
-                if (_ghostRect.Height != _selectedField.Height) { _selectedField.Height = _ghostRect.Height; changed = true; }
+                var anchor = _selectedField; // 클릭한 필드 (가장 마지막에 _resizeStartRect로 잡힘)
+                var anchorStart = _multiDragStart.ContainsKey(anchor) ? _multiDragStart[anchor] : new Point(anchor.X, anchor.Y);
+                var dx = _ghostRect.X - anchorStart.X;
+                var dy = _ghostRect.Y - anchorStart.Y;
+                if (dx != 0 || dy != 0)
+                {
+                    foreach (var kv in _multiDragStart)
+                    {
+                        kv.Key.X = Math.Max(0, kv.Value.X + dx);
+                        kv.Key.Y = Math.Max(0, kv.Value.Y + dy);
+                    }
+                    changed = true;
+                }
             }
+            else
+            {
+                // 단일 이동 또는 리사이즈
+                if (_ghostRect.X != _selectedField.X) { _selectedField.X = _ghostRect.X; changed = true; }
+                if (_ghostRect.Y != _selectedField.Y) { _selectedField.Y = _ghostRect.Y; changed = true; }
+                if (mode != DragMode.Move && _selectedField.FieldType == LabelFieldType.Box)
+                {
+                    if (_ghostRect.Width != _selectedField.Width) { _selectedField.Width = _ghostRect.Width; changed = true; }
+                    if (_ghostRect.Height != _selectedField.Height) { _selectedField.Height = _ghostRect.Height; changed = true; }
+                }
+            }
+            _multiDragStart.Clear();
 
             if (changed)
             {
@@ -1273,32 +1564,49 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
-            // 전역 단축키 (어느 탭에서든 동작)
-            if (e.Control && !e.Shift && !e.Alt && e.KeyCode == Keys.S)
+            // 전역 단축키 — 어느 탭에서든 동작
+            if (e.Control && !e.Alt)
             {
-                SaveCurrent();
-                e.Handled = true;
-                return;
+                if (!e.Shift && e.KeyCode == Keys.S) { SaveCurrent(); e.Handled = true; return; }
+                if (!e.Shift && e.KeyCode == Keys.Z) { Undo(); e.Handled = true; return; }
+                if (e.Shift && e.KeyCode == Keys.Z) { Redo(); e.Handled = true; return; }
+                if (!e.Shift && e.KeyCode == Keys.Y) { Redo(); e.Handled = true; return; }
             }
 
-            // 디자이너 탭에서만 키 처리
+            // 디자이너 탭에서만 동작
             if (tabRight.SelectedTab != tabDesigner) return;
 
-            if (e.KeyCode == Keys.Delete && _selectedField != null)
+            // Ctrl+C/V/A — 디자이너에서만
+            if (e.Control && !e.Alt && !e.Shift)
+            {
+                if (e.KeyCode == Keys.C) { CopySelected(); e.Handled = true; return; }
+                if (e.KeyCode == Keys.V) { Paste(); e.Handled = true; return; }
+                if (e.KeyCode == Keys.A)
+                {
+                    SelectMultiple(_template.Fields, additive: false);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (e.KeyCode == Keys.Delete && _selectedFields.Count > 0)
             {
                 btnDeleteField_Click(sender, EventArgs.Empty);
                 e.Handled = true;
                 return;
             }
 
-            // 화살표로 1 dot씩 미세 조정 (Shift+화살표는 10 dots)
-            if (_selectedField != null && (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Up || e.KeyCode == Keys.Down))
+            // 화살표 — 1 dot 미세 이동 (Shift는 10 dots), 다중선택이면 모두 이동
+            if (_selectedFields.Count > 0 && (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Up || e.KeyCode == Keys.Down))
             {
                 var step = (e.Modifiers & Keys.Shift) == Keys.Shift ? SnapGrid : 1;
-                if (e.KeyCode == Keys.Left) _selectedField.X = Math.Max(0, _selectedField.X - step);
-                if (e.KeyCode == Keys.Right) _selectedField.X += step;
-                if (e.KeyCode == Keys.Up) _selectedField.Y = Math.Max(0, _selectedField.Y - step);
-                if (e.KeyCode == Keys.Down) _selectedField.Y += step;
+                var dx = e.KeyCode == Keys.Left ? -step : e.KeyCode == Keys.Right ? step : 0;
+                var dy = e.KeyCode == Keys.Up ? -step : e.KeyCode == Keys.Down ? step : 0;
+                foreach (var f in _selectedFields)
+                {
+                    f.X = Math.Max(0, f.X + dx);
+                    f.Y = Math.Max(0, f.Y + dy);
+                }
                 pnlCanvas.Invalidate();
                 pgFieldProps.Refresh();
                 RegenerateZplFromTemplate();
@@ -1310,11 +1618,34 @@ namespace ZebraLabelPrinter.UI.Forms
         private void SelectField(LabelField field)
         {
             _selectedField = field;
+            _selectedFields.Clear();
+            if (field != null) _selectedFields.Add(field);
             pgFieldProps.SelectedObject = field;
             pnlCanvas.Invalidate();
             SetStatus(field != null
                 ? "선택: [" + field.FieldType + "] " + (field.Name ?? "")
                 : "선택 해제");
+        }
+
+        private void ToggleSelectField(LabelField field)
+        {
+            if (field == null) return;
+            if (_selectedFields.Contains(field)) _selectedFields.Remove(field);
+            else _selectedFields.Add(field);
+            _selectedField = _selectedFields.LastOrDefault();
+            pgFieldProps.SelectedObjects = _selectedFields.Cast<object>().ToArray();
+            pnlCanvas.Invalidate();
+            SetStatus(_selectedFields.Count + "개 선택");
+        }
+
+        private void SelectMultiple(IEnumerable<LabelField> fields, bool additive)
+        {
+            if (!additive) _selectedFields.Clear();
+            foreach (var f in fields) _selectedFields.Add(f);
+            _selectedField = _selectedFields.LastOrDefault();
+            pgFieldProps.SelectedObjects = _selectedFields.Cast<object>().ToArray();
+            pnlCanvas.Invalidate();
+            SetStatus(_selectedFields.Count + "개 선택");
         }
 
         private void btnAddText_Click(object sender, EventArgs e) { AddField(LabelFieldType.Text); }
@@ -1420,12 +1751,14 @@ namespace ZebraLabelPrinter.UI.Forms
 
         private void btnDeleteField_Click(object sender, EventArgs e)
         {
-            if (_selectedField == null) { SetStatus("삭제할 필드를 먼저 선택하세요"); return; }
-            _template.Fields.Remove(_selectedField);
+            if (_selectedFields.Count == 0) { SetStatus("삭제할 필드를 먼저 선택하세요"); return; }
+            var toDelete = _selectedFields.ToList();
+            foreach (var f in toDelete) _template.Fields.Remove(f);
             SelectField(null);
             RebuildDataBindings();
             RegenerateZplFromTemplate();
             MarkDirty();
+            SetStatus("삭제: " + toDelete.Count + "개 필드");
         }
 
         private void pgFieldProps_PropertyValueChanged(object s, System.Windows.Forms.PropertyValueChangedEventArgs e)
