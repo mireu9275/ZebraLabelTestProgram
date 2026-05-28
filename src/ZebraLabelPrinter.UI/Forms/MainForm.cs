@@ -584,6 +584,15 @@ namespace ZebraLabelPrinter.UI.Forms
 
         // ========== Undo/Redo ==========
 
+        // 파일 불러오기 등 "새 문서" 시점에 호출 — 히스토리를 현재 상태 하나로 초기화.
+        // 이후 Undo가 불러오기 이전으로 넘어가지 않음.
+        private void ResetHistory()
+        {
+            _historyStates.Clear();
+            _historyIndex = -1;
+            PushHistory();
+        }
+
         private void PushHistory()
         {
             if (_suppressHistoryPush) return;
@@ -1511,6 +1520,7 @@ namespace ZebraLabelPrinter.UI.Forms
                     pnlCanvas.Invalidate();
                     _currentFilePath = dlg.FileName;
                     ClearDirty();
+                    ResetHistory(); // 불러온 상태를 Undo 기준점으로 — 이전으로 안 넘어감
                     SetStatus("불러오기 완료: " + dlg.FileName + " (필드 " + _template.Fields.Count + "개)");
                 }
                 catch (Exception ex)
